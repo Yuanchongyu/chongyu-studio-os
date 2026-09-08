@@ -4,9 +4,20 @@ AI-native personal company operating system for education, student progress trac
 
 ## Current status
 
-The bilingual static V1 prototype is now migrated into this repository and can run directly in a browser. This repository is the canonical source of truth from now on — no more ZIP-based handoff.
+The bilingual V1 is deployed on Vercel and this repository is the canonical source of truth — no more ZIP-based handoff.
 
-### Run V1 locally
+The current build includes:
+
+- Founder Command Center
+- Universal Inbox
+- Students / Lessons / Content Studio / Company Brain
+- AI Manager Workspaces
+- GPT / Claude model routing UI
+- Server-side `/api/chat` AI Gateway
+- Supabase-backed context loading and `ai_runs` logging
+- `/api/health` deployment diagnostics
+
+### Run locally
 
 ```bash
 python3 -m http.server 8080
@@ -23,17 +34,11 @@ Then open `http://localhost:8080`.
 - Important AI outputs are written back as structured artifacts.
 - Agents are stateless; company memory is persistent.
 
-## V1 product areas
+## Deployment
 
-- Founder Command Center
-- Universal Inbox
-- Students
-- Lessons
-- Content Studio
-- Company Brain
-- AI Manager directory
-- EN / 中文 UI switch
-- Auto / GPT / Claude model selector prototype
+Production is connected to Vercel through the `main` branch. Environment-variable changes require a fresh production deployment. This commit intentionally triggers a new deployment after the Studio server-side secrets were configured.
+
+Server-only secrets must stay in Vercel Environment Variables and must never be committed to this repository.
 
 ## Repository structure
 
@@ -42,34 +47,28 @@ Then open `http://localhost:8080`.
 ├── index.html
 ├── styles.css
 ├── app.js
+├── manager-workspace.js
+├── manager-ai.js
+├── api/
+│   ├── chat.js
+│   └── health.js
 ├── data/
 │   └── seed.js
 ├── skills/
-│   ├── company/
-│   ├── content/
-│   ├── education/
-│   └── parent/
 ├── supabase/
-│   ├── schema.sql
-│   └── seed.sql
 ├── mcp/
-│   ├── server.py
-│   └── TOOLS.md
 └── docs/
-    ├── ARCHITECTURE.md
-    └── DATABASE_SETUP.md
 ```
 
-## Planned production architecture
+## Production architecture
 
-- Web app: Next.js + Tailwind + shadcn/ui
+- Frontend + server functions: Vercel
 - Database: Supabase Postgres
 - File storage: Supabase Storage
-- Semantic memory: pgvector
 - AI gateway: OpenAI + Anthropic
 - Shared tool layer: Studio MCP
-- Deployment: Vercel
+- Source of truth: GitHub
 
 ## Next milestone
 
-Turn the current AI Manager directory into real Manager Workspaces with persistent shared Studio memory, per-manager context packages, model switching, skills/actions, and structured write-back.
+Add authenticated founder access, structured write-back actions, richer manager context manifests, and a full Context Engine / Skills execution layer.
