@@ -1,0 +1,22 @@
+name: process_lesson
+owner: Education Manager
+purpose: Turn a raw post-class note into durable student, lesson and company artifacts.
+required_context: [student_profile, recent_lessons, current_project, relevant_teaching_principles]
+steps:
+  - extract factual lesson events
+  - identify achievement and difficulty
+  - infer skill changes only when evidence exists
+  - propose next lesson direction
+  - identify parent-friendly growth signal
+  - identify content-worthy story
+  - identify reusable teaching insight
+writeback:
+  - lessons
+  - student_skills
+  - parent_updates:draft
+  - content_items:idea
+  - company_brain:candidate
+rules:
+  - never invent student outcomes
+  - separate observation from inference
+  - preserve source lesson id for every derived artifact
