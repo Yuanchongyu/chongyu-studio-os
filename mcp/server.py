@@ -1,9 +1,8 @@
 """Supabase-backed service layer for Chongyu Studio MCP.
 
-This module intentionally separates the durable Studio tool contract from the MCP
-transport. ChatGPT can already operate the same Supabase project directly today;
-FastMCP / the official MCP SDK can wrap this service later without changing the
-underlying company-memory contract.
+The service layer is the durable contract. ChatGPT can operate the same production
+Supabase project directly today; a standard MCP transport can wrap this module later
+without changing the company-memory model or migrating data.
 """
 from __future__ import annotations
 
@@ -31,7 +30,9 @@ class StudioContext:
 
 class StudioService:
     def __init__(self, supabase_url: Optional[str] = None, service_key: Optional[str] = None):
-        self.base_url = (supabase_url or os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL") or DEFAULT_SUPABASE_URL).rstrip("/")
+        # Production intentionally defaults to the dedicated Studio project instead
+        # of inheriting an unrelated NEXT_PUBLIC_SUPABASE_URL from another app.
+        self.base_url = (supabase_url or os.getenv("SUPABASE_URL") or DEFAULT_SUPABASE_URL).rstrip("/")
         self.service_key = service_key or os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_SERVICE_ROLE_KEY") or ""
         if not self.service_key:
             raise StudioError("A server-side Supabase key is required (SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY).")
@@ -65,6 +66,10 @@ class StudioService:
     def _rpc(self, name: str, payload: Dict[str, Any]) -> Any:
         return self._request("POST", f"/rest/v1/rpc/{name}", payload)
 
+    def _select(self, table: str, query: str = "") -> Any:
+        suffix = f"?{query}" if query else ""
+        return self._request("GET", f"/rest/v1/{table}{suffix}") or []
+
     def _insert(self, table: str, payload: Dict[str, Any]) -> Dict[str, Any]:
         rows = self._request(
             "POST",
@@ -74,15 +79,37 @@ class StudioService:
         ) or []
         return rows[0] if rows else {}
 
+    def _patch(self, table: str, query: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        rows = self._request(
+            "PATCH",
+            f"/rest/v1/{table}?{query}",
+            payload,
+            {"Prefer": "return=representation"},
+        ) or []
+        return rows[0] if rows else {}
+
     def health(self) -> Dict[str, Any]:
-        rows = self._request("GET", "/rest/v1/students?select=id&limit=1") or []
+        rows = self._select("students", "select=id&limit=1")
         return {"ok": True, "database": "connected", "sample_rows": len(rows)}
 
+    # ------------------------------ Context reads ------------------------------
     def get_student_context(self, student_slug: str, lesson_limit: int = 5) -> Dict[str, Any]:
         result = self._rpc(
             "studio_get_student_context",
             {"p_slug": student_slug, "p_lesson_limit": max(1, min(lesson_limit, 20))},
         )
+        return result or {}
+
+    def get_company_context(self, limit: int = 20) -> Dict[str, Any]:
+        result = self._rpc("studio_get_company_context", {"p_limit": max(1, min(limit, 100))})
+        return result or {}
+
+    def get_content_context(self, limit: int = 20) -> Dict[str, Any]:
+        result = self._rpc("studio_get_content_context", {"p_limit": max(1, min(limit, 100))})
+        return result or {}
+
+    def get_weekly_snapshot(self, days: int = 30) -> Dict[str, Any]:
+        result = self._rpc("studio_get_weekly_snapshot", {"p_days": max(1, min(days, 365))})
         return result or {}
 
     def search_memory(self, query: str, limit: int = 8) -> Any:
@@ -91,6 +118,15 @@ class StudioService:
             {"p_query": query, "p_limit": max(1, min(limit, 30))},
         )
 
+    def get_inbox(self, status: str = "new", limit: int = 20) -> Any:
+        if status not in {"new", "processed", "archived", "all"}:
+            raise StudioError("Inbox status must be new, processed, archived or all.")
+        clauses = ["select=id,input_type,raw_content,classification,status,created_at", "order=created_at.desc", f"limit={max(1, min(limit, 100))}"]
+        if status != "all":
+            clauses.append(f"status=eq.{urllib.parse.quote(status)}")
+        return self._select("inbox_items", "&".join(clauses))
+
+    # ------------------------------ Write-backs -------------------------------
     def capture(self, content: str, input_type: str = "founder_note", classification: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         if not content.strip():
             raise StudioError("Capture content cannot be empty.")
@@ -104,6 +140,14 @@ class StudioService:
             },
         )
 
+    def mark_inbox_processed(self, item_id: str, classification: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        if not item_id:
+            raise StudioError("Inbox item id is required.")
+        payload: Dict[str, Any] = {"status": "processed"}
+        if classification is not None:
+            payload["classification"] = classification
+        return self._patch("inbox_items", f"id=eq.{urllib.parse.quote(item_id)}", payload)
+
     def save_memory(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         required = ["memory_type", "title", "summary"]
         missing = [field for field in required if not payload.get(field)]
@@ -111,14 +155,14 @@ class StudioService:
             raise StudioError(f"Missing memory fields: {', '.join(missing)}")
         clean = {
             "memory_type": payload["memory_type"],
-            "entity_type": payload.get("entity_type"),
+            "entity_type": payload.get("entity_type") or "company",
             "entity_ref": payload.get("entity_ref"),
             "title": payload["title"],
             "summary": payload["summary"],
             "details": payload.get("details") or {},
             "source_type": payload.get("source_type"),
             "source_ref": payload.get("source_ref"),
-            "importance": int(payload.get("importance", 3)),
+            "importance": max(1, min(int(payload.get("importance", 3)), 5)),
             "status": payload.get("status", "candidate"),
             "created_by": payload.get("created_by", "AI"),
             "approved_by": payload.get("approved_by"),
@@ -138,8 +182,13 @@ class StudioService:
 TOOLS = {
     "studio.health": "Verify the Studio database connection.",
     "studio.get_student_context": "Read compact durable context for one student.",
+    "studio.get_company_context": "Read current company principles, decisions and durable memory.",
+    "studio.get_content_context": "Read a compact content pipeline context package.",
+    "studio.get_weekly_snapshot": "Read an executive snapshot for the requested recent time window.",
     "studio.search_memory": "Search approved long-term Studio memory.",
+    "studio.get_inbox": "Read unprocessed or historical Universal Inbox items.",
     "studio.capture": "Capture a raw founder note into the Universal Inbox.",
+    "studio.mark_inbox_processed": "Mark an Inbox item processed and attach classification metadata.",
     "studio.save_memory": "Save a compact durable memory item with provenance.",
     "studio.create_lesson": "Write a structured lesson artifact.",
     "studio.save_decision": "Write a company decision or proposal.",
