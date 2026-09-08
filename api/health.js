@@ -1,7 +1,12 @@
+const STUDIO_SUPABASE_URL = 'https://lclkojyfyqhefwmkmgym.supabase.co';
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed.' });
 
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://lclkojyfyqhefwmkmgym.supabase.co';
+  // Server-side Studio APIs must always target the canonical Studio project.
+  // Do not rely on NEXT_PUBLIC_SUPABASE_URL here because that variable may be
+  // managed by a separate Vercel/Supabase integration and can point elsewhere.
+  const supabaseUrl = process.env.SUPABASE_URL || STUDIO_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
   const configured = {
     supabase: Boolean(supabaseKey),
@@ -11,14 +16,25 @@ export default async function handler(req, res) {
   };
 
   let database = 'not_configured';
+  let databaseDetail = null;
   if (configured.supabase) {
     try {
       const headers = { apikey: supabaseKey };
+      // Legacy service_role keys are JWTs and need Authorization too.
+      // New sb_secret_* keys should be sent only as apikey.
       if (supabaseKey.startsWith('eyJ')) headers.Authorization = `Bearer ${supabaseKey}`;
       const r = await fetch(`${supabaseUrl.replace(/\/$/, '')}/rest/v1/students?select=id&limit=1`, { headers });
-      database = r.ok ? 'connected' : `error_${r.status}`;
-    } catch (_) {
+      if (r.ok) {
+        database = 'connected';
+      } else {
+        database = `error_${r.status}`;
+        const body = await r.text();
+        // Safe diagnostic: only return the upstream status/message, never keys.
+        databaseDetail = body.slice(0, 300);
+      }
+    } catch (error) {
       database = 'unreachable';
+      databaseDetail = error?.message || 'Unknown connection error';
     }
   }
 
@@ -27,10 +43,12 @@ export default async function handler(req, res) {
     status: memoryReady ? 'memory_ready' : 'setup_required',
     configured,
     database,
+    databaseDetail,
     project: 'chongyu-studio-os',
+    targetHost: new URL(supabaseUrl).host,
     note: memoryReady
       ? 'Studio memory is ready. OpenAI/Anthropic are optional for the current workflow.'
-      : 'Configure the Supabase server key and Studio access token to enable live memory.',
+      : 'Studio memory backend is not ready yet; inspect database/databaseDetail.',
     timestamp: new Date().toISOString()
   });
 }
