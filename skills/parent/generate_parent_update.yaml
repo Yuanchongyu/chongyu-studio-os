@@ -1,0 +1,14 @@
+name: generate_parent_update
+owner: Education Manager
+purpose: Explain a student's latest growth to a parent in clear non-technical language.
+required_context: [student_profile, latest_lesson, recent_trajectory, previous_parent_updates]
+steps:
+  - identify the clearest growth moment
+  - explain what the student did independently
+  - translate technical concepts into learning meaning
+  - mention one next-step direction
+rules:
+  - no jargon dump
+  - no exaggerated praise
+  - distinguish completed work from next-step plans
+output: [parent_message, evidence_ids]
