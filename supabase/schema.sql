@@ -184,3 +184,33 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   create trigger brain_updated before update on company_brain for each row execute function studio_set_updated_at();
 exception when duplicate_object then null; end $$;
+
+-- Secure-by-default: enable RLS on every Studio table.
+-- No browser-facing policies are created yet. Until Supabase Auth is added,
+-- Studio data is intended to be accessed only through the server-side backend.
+alter table public.students enable row level security;
+alter table public.lessons enable row level security;
+alter table public.student_skills enable row level security;
+alter table public.projects enable row level security;
+alter table public.artifacts enable row level security;
+alter table public.parent_updates enable row level security;
+alter table public.content_items enable row level security;
+alter table public.content_metrics enable row level security;
+alter table public.decisions enable row level security;
+alter table public.company_brain enable row level security;
+alter table public.inbox_items enable row level security;
+alter table public.ai_runs enable row level security;
+
+-- Defense in depth: do not permit direct browser-role table access in V1.
+revoke all on table public.students from anon, authenticated;
+revoke all on table public.lessons from anon, authenticated;
+revoke all on table public.student_skills from anon, authenticated;
+revoke all on table public.projects from anon, authenticated;
+revoke all on table public.artifacts from anon, authenticated;
+revoke all on table public.parent_updates from anon, authenticated;
+revoke all on table public.content_items from anon, authenticated;
+revoke all on table public.content_metrics from anon, authenticated;
+revoke all on table public.decisions from anon, authenticated;
+revoke all on table public.company_brain from anon, authenticated;
+revoke all on table public.inbox_items from anon, authenticated;
+revoke all on table public.ai_runs from anon, authenticated;
