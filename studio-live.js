@@ -3,6 +3,12 @@
 
   const langNow = () => (typeof lang !== 'undefined' ? lang : 'en');
   const bi = (en, zh) => ({ en, zh });
+  const esc = value => String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 
   async function sessionStatus() {
     try {
@@ -34,11 +40,27 @@
     return true;
   }
 
+  function configureOperatingMode() {
+    // The current product direction is: ChatGPT is the primary AI operator,
+    // Studio Web is the visual workspace. Do not present another competing chat.
+    const aiBar = document.querySelector('.ai-bar');
+    if (aiBar) aiBar.style.display = 'none';
+
+    const modelBtn = document.getElementById('modelBtn');
+    if (modelBtn) {
+      modelBtn.textContent = langNow() === 'zh' ? 'ChatGPT · 主 AI 操作员' : 'ChatGPT · Primary AI Operator';
+      modelBtn.disabled = true;
+      modelBtn.title = langNow() === 'zh'
+        ? '当前由 ChatGPT 操作共享 Supabase 公司记忆；网页负责查看、记录与审批。'
+        : 'ChatGPT currently operates the shared Supabase company memory; the web app is for viewing, capture and approval.';
+    }
+  }
+
   function setMemoryStatus(mode, detail = '') {
     const el = document.getElementById('memoryStatus');
     if (!el) return;
     if (mode === 'live') {
-      el.textContent = langNow() === 'zh' ? 'Supabase 公司记忆在线' : 'Supabase company memory online';
+      el.textContent = langNow() === 'zh' ? '● Supabase 公司记忆在线' : '● Supabase company memory online';
     } else if (mode === 'error') {
       el.textContent = langNow() === 'zh'
         ? `记忆连接失败${detail ? ` · ${detail}` : ''}`
@@ -47,12 +69,62 @@
       el.textContent = langNow() === 'zh' ? '🔒 点击连接公司记忆' : '🔒 Click to connect company memory';
     }
     el.style.cursor = 'pointer';
-    el.title = langNow() === 'zh' ? '点击连接 / 重新连接 Supabase 公司记忆' : 'Connect / reconnect Supabase company memory';
+    el.title = mode === 'live'
+      ? (langNow() === 'zh' ? '已连接真实 Supabase 数据。点击可重新验证。' : 'Connected to live Supabase data. Click to revalidate.')
+      : (langNow() === 'zh' ? '点击连接 Supabase 公司记忆' : 'Connect Supabase company memory');
     el.onclick = () => connectStudioMemory(true);
   }
 
   function latestMetric(metrics, contentId) {
     return metrics.find(m => m.content_id === contentId) || null;
+  }
+
+  function enhanceLiveView() {
+    configureOperatingMode();
+    if (state.mode !== 'live') return;
+
+    if (typeof current !== 'undefined' && current === 'command' && D.liveStats) {
+      const grid = document.querySelector('#content .grid.grid-4');
+      const cards = grid ? [...grid.querySelectorAll(':scope > .card')] : [];
+      const draftCount = (D.content || []).filter(x => x.status === 'Draft').length;
+      const readyCount = (D.content || []).filter(x => x.status === 'Ready').length;
+      const insightCount = Number(D.liveStats.brain || 0) + Number(D.liveStats.memory || 0);
+      const values = [D.liveStats.students, D.liveStats.lessons, D.liveStats.content, insightCount];
+      const deltas = langNow() === 'zh'
+        ? ['实时读取 Supabase', `${D.liveStats.lessons} 条课程记录`, `${draftCount} 草稿 · ${readyCount} 待发布`, `${D.liveStats.memory} 条长期记忆`]
+        : ['Live from Supabase', `${D.liveStats.lessons} lesson records`, `${draftCount} drafts · ${readyCount} ready`, `${D.liveStats.memory} durable memories`];
+      cards.slice(0, 4).forEach((card, i) => {
+        const metric = card.querySelector('.metric');
+        const delta = card.querySelector('.delta');
+        if (metric) metric.textContent = values[i];
+        if (delta) delta.textContent = deltas[i];
+      });
+    }
+
+    if (typeof current !== 'undefined' && current === 'brain' && Array.isArray(D.memoryItems) && D.memoryItems.length) {
+      const content = document.getElementById('content');
+      if (content && !document.getElementById('durableMemorySection')) {
+        const active = D.memoryItems.filter(m => m.status !== 'archived').slice(0, 12);
+        const cards = active.map(m => `
+          <div class="card">
+            <div class="row" style="justify-content:space-between;gap:12px">
+              <span class="pill">${esc(m.memory_type || 'memory')}</span>
+              <span class="subtle">${langNow() === 'zh' ? '重要度' : 'Importance'} ${esc(m.importance || 3)}/5</span>
+            </div>
+            <h3>${esc(m.title || '')}</h3>
+            <p>${esc(m.summary || '')}</p>
+            <div class="subtle">${esc(m.entity_type || 'company')}${m.entity_ref ? ` · ${esc(m.entity_ref)}` : ''}</div>
+          </div>`).join('');
+        content.insertAdjacentHTML('beforeend', `
+          <div id="durableMemorySection">
+            <div class="section-title" style="margin-top:28px">
+              <h2>${langNow() === 'zh' ? '长期记忆' : 'Durable Memory'}</h2>
+              <span>${langNow() === 'zh' ? '压缩后的可复用记忆，不保存整段聊天' : 'Compact reusable memory, not whole chat transcripts'}</span>
+            </div>
+            <div class="grid grid-3">${cards}</div>
+          </div>`);
+      }
+    }
   }
 
   function hydrate(raw) {
@@ -141,6 +213,7 @@
     setMemoryStatus('live');
     if (D.students.length && !D.students.some(s => s.id === selectedStudent)) selectedStudent = D.students[0].id;
     render();
+    enhanceLiveView();
   }
 
   async function fetchStudioData() {
@@ -241,15 +314,26 @@
     return data;
   };
 
+  const baseRender = window.render;
+  if (baseRender) {
+    window.render = function() {
+      baseRender();
+      enhanceLiveView();
+    };
+  }
+
   const baseSetLanguage = window.setLanguage;
   if (baseSetLanguage) {
     window.setLanguage = function(next) {
       baseSetLanguage(next);
       setMemoryStatus(state.mode, state.error || '');
+      configureOperatingMode();
+      enhanceLiveView();
     };
   }
 
   window.addEventListener('load', async () => {
+    configureOperatingMode();
     setMemoryStatus('locked');
     // Quietly reconnect if this browser already has a valid HttpOnly session.
     await connectStudioMemory(false);
