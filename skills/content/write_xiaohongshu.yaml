@@ -1,0 +1,18 @@
+name: write_xiaohongshu
+owner: Content Manager
+purpose: Convert a real teaching artifact into a Xiaohongshu post for Chinese-speaking parents.
+required_context: [source_event, brand_voice, content_strategy, relevant_content_performance]
+steps:
+  - find the real story tension
+  - choose one parent-relevant insight
+  - generate several differentiated hooks
+  - select the strongest angle
+  - draft concise Chinese copy
+  - remove generic AI-marketing language
+  - preserve factual provenance
+rules:
+  - do not fabricate achievements
+  - prioritize specific student moments over generic claims
+  - default to platform-length-conscious writing
+  - emphasize thinking growth, not tool-name flexing
+output: [title, body, tags, angle, source_ids]
