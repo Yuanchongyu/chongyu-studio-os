@@ -35,6 +35,7 @@ Verified on 2026-09-08:
 - Security-definer helper access was hardened and mutable function search-path warning was fixed.
 - Missing foreign-key indexes were added.
 - Vercel automatically deploys `main` commits.
+- The Vercel project now has a server-side Supabase secret configured; this commit triggers a fresh Production deployment so runtime connectivity can be verified.
 
 ## Product areas
 
@@ -94,7 +95,7 @@ The repository now includes:
 - `studio-live.js` — hydrates the current V1 UI from Supabase and writes Capture items to the real Inbox
 - `/api/health` — reports whether the memory backend is ready
 
-One server-side Supabase key still has to exist in Vercel (`SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY`). It must never be committed to GitHub or sent through chat.
+The server-side Supabase key lives only in Vercel (`SUPABASE_SECRET_KEY` or legacy `SUPABASE_SERVICE_ROLE_KEY`). It must never be committed to GitHub or sent through chat.
 
 ## Security posture
 
@@ -130,7 +131,7 @@ One server-side Supabase key still has to exist in Vercel (`SUPABASE_SECRET_KEY`
 
 ## Next milestones
 
-1. Finish Vercel → Supabase server-key connection so the website reads live data.
+1. Verify Vercel runtime can reach Supabase with the new server secret.
 2. Replace remaining demo-only UI assumptions with CRUD against Supabase.
 3. Add founder approval flows for `candidate` memories / decisions.
 4. Add richer task-specific context helpers instead of loading broad database slices.
