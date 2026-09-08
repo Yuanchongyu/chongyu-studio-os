@@ -1,0 +1,13 @@
+name: prepare_lesson
+owner: Education Manager
+purpose: Design the next lesson for one student from their actual trajectory.
+required_context: [student_profile, recent_lessons, skill_map, current_project, curriculum, teaching_principles]
+steps:
+  - summarize previous state
+  - identify one primary learning gap
+  - choose the next natural project milestone
+  - introduce only the minimum necessary new concept
+  - design a 2-hour lesson arc
+  - create independent-thinking checkpoints
+  - define what evidence to capture after class
+output: [learning_objective, lesson_plan, exercises, observation_points, fallback_plan]
