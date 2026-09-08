@@ -1,28 +1,53 @@
 (() => {
-  const TOKEN_KEY = 'studio_access_token';
-  const state = window.STUDIO_LIVE_STATE = { mode: 'demo', loadedAt: null, error: null };
+  const state = window.STUDIO_LIVE_STATE = { mode: 'locked', loadedAt: null, error: null };
 
   const langNow = () => (typeof lang !== 'undefined' ? lang : 'en');
   const bi = (en, zh) => ({ en, zh });
 
-  function getToken(promptIfMissing = false) {
-    let token = sessionStorage.getItem(TOKEN_KEY) || '';
-    if (!token && promptIfMissing) {
-      token = window.prompt(langNow() === 'zh'
-        ? '请输入 Studio Access Token，以连接公司记忆（仅保存在当前浏览器会话）'
-        : 'Enter your Studio Access Token to connect company memory (stored only for this browser session)') || '';
-      if (token) sessionStorage.setItem(TOKEN_KEY, token);
+  async function sessionStatus() {
+    try {
+      const r = await fetch('/api/session', { credentials: 'same-origin' });
+      const data = await r.json().catch(() => ({}));
+      return Boolean(r.ok && data.authenticated);
+    } catch (_) {
+      return false;
     }
-    return token;
+  }
+
+  async function unlockFounderSession() {
+    const token = window.prompt(langNow() === 'zh'
+      ? '请输入 Studio Access Token。验证成功后会使用安全的 HttpOnly Cookie 记住这台浏览器 30 天；Token 本身不会保存在网页 JS 中。'
+      : 'Enter your Studio Access Token. After verification, a secure HttpOnly cookie remembers this browser for 30 days; the token itself is not stored in page JavaScript.') || '';
+    if (!token) return false;
+
+    const r = await fetch('/api/session', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      alert(data.error || (langNow() === 'zh' ? 'Access Token 不正确' : 'Invalid access token'));
+      return false;
+    }
+    return true;
   }
 
   function setMemoryStatus(mode, detail = '') {
     const el = document.getElementById('memoryStatus');
     if (!el) return;
-    if (mode === 'live') el.textContent = langNow() === 'zh' ? 'Supabase 公司记忆在线' : 'Supabase company memory online';
-    else if (mode === 'error') el.textContent = langNow() === 'zh' ? `记忆连接失败${detail ? ` · ${detail}` : ''}` : `Memory connection failed${detail ? ` · ${detail}` : ''}`;
-    else el.textContent = langNow() === 'zh' ? '演示数据 · 点击连接记忆' : 'Demo data · click to connect memory';
+    if (mode === 'live') {
+      el.textContent = langNow() === 'zh' ? 'Supabase 公司记忆在线' : 'Supabase company memory online';
+    } else if (mode === 'error') {
+      el.textContent = langNow() === 'zh'
+        ? `记忆连接失败${detail ? ` · ${detail}` : ''}`
+        : `Memory connection failed${detail ? ` · ${detail}` : ''}`;
+    } else {
+      el.textContent = langNow() === 'zh' ? '🔒 点击连接公司记忆' : '🔒 Click to connect company memory';
+    }
     el.style.cursor = 'pointer';
+    el.title = langNow() === 'zh' ? '点击连接 / 重新连接 Supabase 公司记忆' : 'Connect / reconnect Supabase company memory';
     el.onclick = () => connectStudioMemory(true);
   }
 
@@ -37,6 +62,10 @@
       if (!lessonsByStudent.has(l.student_id)) lessonsByStudent.set(l.student_id, []);
       lessonsByStudent.get(l.student_id).push(l);
     }
+    for (const list of lessonsByStudent.values()) {
+      list.sort((a, b) => String(a.lesson_date || '').localeCompare(String(b.lesson_date || '')) || Number(a.lesson_number || 0) - Number(b.lesson_number || 0));
+    }
+
     const skillsByStudent = new Map();
     for (const s of rows.student_skills || []) {
       if (!skillsByStudent.has(s.student_id)) skillsByStudent.set(s.student_id, {});
@@ -97,6 +126,15 @@
 
     D.decisions = rows.decisions || [];
     D.memoryItems = rows.memory_items || [];
+    D.liveStats = {
+      students: D.students.length,
+      lessons: (rows.lessons || []).length,
+      content: D.content.length,
+      brain: D.brain.length,
+      inboxNew: (rows.inbox_items || []).filter(x => x.status === 'new').length,
+      memory: (rows.memory_items || []).filter(x => x.status !== 'archived').length
+    };
+
     state.mode = 'live';
     state.loadedAt = new Date().toISOString();
     state.error = null;
@@ -105,18 +143,30 @@
     render();
   }
 
+  async function fetchStudioData() {
+    const r = await fetch('/api/studio-data', { credentials: 'same-origin' });
+    const data = await r.json().catch(() => ({}));
+    return { r, data };
+  }
+
   window.connectStudioMemory = async function(promptIfMissing = true) {
-    const token = getToken(promptIfMissing);
-    if (!token) {
-      setMemoryStatus('demo');
-      return false;
-    }
     try {
-      const r = await fetch('/api/studio-data', { headers: { 'x-studio-access-token': token } });
-      const data = await r.json().catch(() => ({}));
+      let { r, data } = await fetchStudioData();
+      if (r.status === 401 && promptIfMissing) {
+        const unlocked = await unlockFounderSession();
+        if (!unlocked) {
+          state.mode = 'locked';
+          setMemoryStatus('locked');
+          return false;
+        }
+        ({ r, data } = await fetchStudioData());
+      }
+
       if (r.status === 401) {
-        sessionStorage.removeItem(TOKEN_KEY);
-        throw new Error(langNow() === 'zh' ? 'Access Token 不正确' : 'Invalid access token');
+        state.mode = 'locked';
+        state.error = null;
+        setMemoryStatus('locked');
+        return false;
       }
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
       hydrate(data);
@@ -129,12 +179,20 @@
     }
   };
 
+  window.disconnectStudioMemory = async function() {
+    await fetch('/api/session', { method: 'DELETE', credentials: 'same-origin' }).catch(() => null);
+    state.mode = 'locked';
+    state.error = null;
+    setMemoryStatus('locked');
+    location.reload();
+  };
+
   window.openInboxComposer = function() {
     const modal = document.getElementById('modal');
     modal.classList.remove('hidden');
     modal.innerHTML = `<div class="modal-card">
       <h2>${langNow() === 'zh' ? '记录到公司记忆' : 'Capture to company memory'}</h2>
-      <p class="subtle">${langNow() === 'zh' ? '这条内容会直接写入 Supabase Inbox，之后我可以帮你分类成课程、决策、内容或长期记忆。' : 'This writes directly to the Supabase Inbox. It can later be classified into a lesson, decision, content item or long-term memory.'}</p>
+      <p class="subtle">${langNow() === 'zh' ? '这条内容会直接写入 Supabase Inbox。之后可以由 ChatGPT 把它整理成课程、决策、内容或长期记忆。' : 'This writes directly to the Supabase Inbox. ChatGPT can later turn it into a lesson, decision, content item or durable memory.'}</p>
       <textarea id="liveCaptureText" placeholder="${langNow() === 'zh' ? '课堂观察、想法、决策、待办……' : 'Class observation, idea, decision, task…'}"></textarea>
       <div class="modal-actions"><button class="ghost" onclick="closeModal()">${langNow() === 'zh' ? '取消' : 'Cancel'}</button><button class="primary" onclick="submitLiveCapture()">${langNow() === 'zh' ? '保存到 Supabase' : 'Save to Supabase'}</button></div>
     </div>`;
@@ -143,11 +201,16 @@
   window.submitLiveCapture = async function() {
     const text = document.getElementById('liveCaptureText')?.value.trim();
     if (!text) return;
-    const token = getToken(true);
-    if (!token) return;
+
+    if (!(await sessionStatus())) {
+      const unlocked = await unlockFounderSession();
+      if (!unlocked) return;
+    }
+
     const r = await fetch('/api/studio-data', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-studio-access-token': token },
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'capture', payload: { input_type: 'founder_note', content: text } })
     });
     const data = await r.json().catch(() => ({}));
@@ -159,6 +222,25 @@
     await connectStudioMemory(false);
   };
 
+  // Small client helper for future CRUD controls. The UI does not need to know
+  // Supabase keys; every write goes through the authenticated Vercel backend.
+  window.studioAction = async function(action, payload = {}) {
+    if (!(await sessionStatus())) {
+      const unlocked = await unlockFounderSession();
+      if (!unlocked) throw new Error('Founder session required.');
+    }
+    const r = await fetch('/api/studio-data', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, payload })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    await connectStudioMemory(false);
+    return data;
+  };
+
   const baseSetLanguage = window.setLanguage;
   if (baseSetLanguage) {
     window.setLanguage = function(next) {
@@ -167,8 +249,9 @@
     };
   }
 
-  window.addEventListener('load', () => {
-    setMemoryStatus('demo');
-    if (sessionStorage.getItem(TOKEN_KEY)) connectStudioMemory(false);
+  window.addEventListener('load', async () => {
+    setMemoryStatus('locked');
+    // Quietly reconnect if this browser already has a valid HttpOnly session.
+    await connectStudioMemory(false);
   });
 })();
