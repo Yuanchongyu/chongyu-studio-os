@@ -1,0 +1,11 @@
+name: save_decision
+owner: Chief of Staff
+purpose: Convert a long AI discussion into a durable company decision.
+required_context: [discussion_summary, related_entities, related_company_brain]
+steps:
+  - identify the actual decision
+  - summarize context
+  - capture rationale and tradeoffs
+  - list affected entities/workflows
+  - keep status proposed until founder approval
+writeback: [decisions]
