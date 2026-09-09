@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/parent/:student", "destination": "/parent.html?student=:student" }
+  ]
+}
