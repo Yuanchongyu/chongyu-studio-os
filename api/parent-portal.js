@@ -4,15 +4,16 @@ const PROJECT_URL = 'https://lclkojyfyqhefwmkmgym.supabase.co';
 const FOUNDER_COOKIE = 'studio_session';
 
 function key(){ return process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''; }
-function headers(){ const k=key(); const h={apikey:k,'Content-Type':'application/json'}; if(k.startsWith('eyJ')) h.Authorization=`Bearer ${k}`; return h; }
+function headers(extra={}){ const k=key(); const h={apikey:k,'Content-Type':'application/json',...extra}; if(k.startsWith('eyJ')) h.Authorization=`Bearer ${k}`; return h; }
 function cookies(req){ const raw=req.headers.cookie||''; return Object.fromEntries(raw.split(';').map(p=>{const i=p.indexOf('=');return i<0?['','']:[p.slice(0,i).trim(),decodeURIComponent(p.slice(i+1).trim())]}).filter(([k])=>k)); }
 function safeEqual(a,b){ const aa=Buffer.from(String(a||''));const bb=Buffer.from(String(b||''));return aa.length===bb.length&&crypto.timingSafeEqual(aa,bb); }
 function founderSig(){ const s=process.env.STUDIO_ACCESS_TOKEN||''; return s?crypto.createHmac('sha256',s).update('chongyu-studio-founder-session-v1').digest('hex'):''; }
 function founderAuthorized(req){ const c=cookies(req)[FOUNDER_COOKIE]||'';const sig=founderSig();return Boolean(c&&sig&&safeEqual(c,sig)); }
 function parentCookie(slug){ return `cys_parent_${String(slug).replace(/[^a-z0-9_]/gi,'_')}`; }
 function parentSig(slug,hash){ const s=process.env.STUDIO_ACCESS_TOKEN||'';return crypto.createHmac('sha256',s).update(`parent:${slug}:${hash}`).digest('hex'); }
-function setCookie(res,name,value,maxAge){ res.setHeader('Set-Cookie',`${name}=${encodeURIComponent(value)}; Path=/parent/${encodeURIComponent(name.replace('cys_parent_',''))}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Strict`); }
+function encodeStoragePath(path){return String(path||'').split('/').map(encodeURIComponent).join('/');}
 async function rest(table,q=''){ const r=await fetch(`${PROJECT_URL}/rest/v1/${table}${q?`?${q}`:''}`,{headers:headers()});const t=await r.text();if(!r.ok)throw new Error(`${table}: ${r.status} ${t.slice(0,300)}`);return t?JSON.parse(t):[]; }
+async function signObject(bucket,path,expiresIn=3600){if(!bucket||!path)return null;const r=await fetch(`${PROJECT_URL}/storage/v1/object/sign/${encodeStoragePath(bucket)}/${encodeStoragePath(path)}`,{method:'POST',headers:headers(),body:JSON.stringify({expiresIn})});const t=await r.text();if(!r.ok)return null;const d=t?JSON.parse(t):{};const s=d.signedURL||d.signedUrl||'';return s?(s.startsWith('http')?s:`${PROJECT_URL}/storage/v1${s}`):null;}
 
 async function loadPortal(slug){
   const students=await rest('students',`select=id,slug,name,age,current_level,current_project,status&slug=eq.${encodeURIComponent(slug)}&limit=1`);
@@ -22,11 +23,12 @@ async function loadPortal(slug){
 }
 
 async function portfolio(student, founder=false){
-  const [skills,records,artifacts] = await Promise.all([
+  const [skills,records,artifactRows] = await Promise.all([
     rest('student_skills',`select=skill_name,score,confidence,evidence,updated_at&student_id=eq.${encodeURIComponent(student.id)}`),
     rest('student_session_records',`select=id,session_id,track,achievement,difficulty,next_step,teacher_note,evidence,created_at&student_id=eq.${encodeURIComponent(student.id)}&order=created_at.asc`),
     rest('artifacts',`select=id,artifact_type,title,storage_bucket,storage_path,external_url,metadata,created_at&student_id=eq.${encodeURIComponent(student.id)}&order=created_at.desc`)
   ]);
+  const artifacts=await Promise.all(artifactRows.map(async a=>({...a,signed_url:a.storage_bucket&&a.storage_path?await signObject(a.storage_bucket,a.storage_path,3600):null})));
   const ids=[...new Set(records.map(r=>r.session_id).filter(Boolean))];
   let sessions=[];
   if(ids.length){ sessions=await rest('course_sessions',`select=id,session_number,title,summary,learning_goals,concepts,highlights,teacher_reflection,source_url,media&or=(${ids.map(id=>`id.eq.${id}`).join(',')})&order=session_number.asc`); }
