@@ -54,8 +54,13 @@
     if(file.size>120*1024*1024)throw new Error(zh()?'MP4 超过 120 MB':'MP4 exceeds 120 MB');
     const sign=await fetch('/api/upload-intake',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create_video_upload',file_name:file.name,mime_type:'video/mp4',size_bytes:file.size,note})});
     const signed=await sign.json().catch(()=>({}));if(!sign.ok)throw new Error(signed.error||`HTTP ${sign.status}`);
-    const put=await fetch(signed.upload_url,{method:'PUT',headers:{'Content-Type':'video/mp4'},body:file});
+
+    const form=new FormData();
+    form.append('cacheControl','3600');
+    form.append('',file,file.name);
+    const put=await fetch(signed.upload_url,{method:'PUT',headers:{'x-upsert':'false'},body:form});
     if(!put.ok){const detail=await put.text().catch(()=>'');throw new Error(`Video upload ${put.status}${detail?`: ${detail.slice(0,180)}`:''}`);}
+
     const fin=await fetch('/api/upload-intake',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'finalize_video_upload',file_name:file.name,mime_type:'video/mp4',storage_bucket:signed.storage_bucket,storage_path:signed.storage_path,note})});
     const finalData=await fin.json().catch(()=>({}));if(!fin.ok)throw new Error(finalData.error||`HTTP ${fin.status}`);return finalData;
   }
@@ -74,6 +79,6 @@
       }
       alert(zh()?`已收到 ${done} 个素材。现在直接回 ChatGPT 说：“处理我刚上传的素材”。`:`Received ${done} files. Now tell ChatGPT: “process my latest uploads”.`);
       closeModal();
-    }catch(e){alert(`${zh()?'上传失败':'Upload failed'} (${done}/${files.length}): ${e.message}`);}finally{progress?.classList.add('hidden');}
+    }catch(e){console.error('Media upload failed:',e);alert(`${zh()?'上传失败':'Upload failed'} (${done}/${files.length}): ${e.message}`);}finally{progress?.classList.add('hidden');}
   };
 })();
