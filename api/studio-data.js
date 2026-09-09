@@ -38,13 +38,8 @@ function sessionSignature() {
 function authorized(req) {
   const expected = process.env.STUDIO_ACCESS_TOKEN || '';
   if (!expected) return false;
-
-  // Keep header auth for scripts / future MCP wrappers.
   const supplied = req.headers['x-studio-access-token'] || '';
   if (supplied && safeEqual(supplied, expected)) return true;
-
-  // Browser uses an HttpOnly derived session cookie so the real access token is
-  // never stored in localStorage/sessionStorage or exposed to frontend JS.
   const cookie = parseCookies(req)[SESSION_COOKIE] || '';
   const signature = sessionSignature();
   return Boolean(cookie && signature && safeEqual(cookie, signature));
@@ -56,49 +51,48 @@ async function rest(table, query = '') {
   const url = `${PROJECT_URL}/rest/v1/${table}${query ? `?${query}` : ''}`;
   const r = await fetch(url, { headers: headers() });
   const text = await r.text();
-  if (!r.ok) throw new Error(`${table}: ${r.status} ${text.slice(0, 400)}`);
+  if (!r.ok) throw new Error(`${table}: ${r.status} ${text.slice(0, 500)}`);
   return text ? JSON.parse(text) : [];
 }
 
 async function insert(table, body) {
-  const key = serverKey();
-  if (!key) throw new Error('Supabase server key is not configured in Vercel.');
   const r = await fetch(`${PROJECT_URL}/rest/v1/${table}`, {
     method: 'POST',
     headers: headers({ Prefer: 'return=representation' }),
     body: JSON.stringify(body)
   });
   const text = await r.text();
-  if (!r.ok) throw new Error(`${table}: ${r.status} ${text.slice(0, 400)}`);
+  if (!r.ok) throw new Error(`${table}: ${r.status} ${text.slice(0, 500)}`);
   return text ? JSON.parse(text) : [];
 }
 
 async function patch(table, query, body) {
-  const key = serverKey();
-  if (!key) throw new Error('Supabase server key is not configured in Vercel.');
   const r = await fetch(`${PROJECT_URL}/rest/v1/${table}?${query}`, {
     method: 'PATCH',
     headers: headers({ Prefer: 'return=representation' }),
     body: JSON.stringify(body)
   });
   const text = await r.text();
-  if (!r.ok) throw new Error(`${table}: ${r.status} ${text.slice(0, 400)}`);
+  if (!r.ok) throw new Error(`${table}: ${r.status} ${text.slice(0, 500)}`);
   return text ? JSON.parse(text) : [];
 }
 
 async function bootstrap() {
   const specs = [
-    ['students', 'select=id,slug,name,age,current_level,current_project,status,progress,parent_notes&order=name.asc'],
+    ['students', 'select=id,slug,name,age,current_level,current_project,status,progress,parent_notes&status=eq.active&order=name.asc'],
     ['lessons', 'select=id,student_id,lesson_number,lesson_date,title,plan,summary,achievement,difficulty,next_step,created_at&order=lesson_date.asc'],
     ['student_skills', 'select=student_id,skill_name,score,confidence,evidence,updated_at'],
-    ['content_items', 'select=id,title,platform,pillar,hook,body,status,source_type,source_label,published_at,created_at,updated_at&order=updated_at.desc'],
+    ['course_sessions', 'select=id,session_number,title,summary,learning_goals,concepts,highlights,teacher_reflection,source_platform,source_url,media,status,created_at,updated_at&status=neq.archived&order=session_number.asc'],
+    ['student_session_records', 'select=id,session_id,student_id,track,achievement,difficulty,next_step,teacher_note,evidence,created_at,updated_at&order=created_at.asc'],
+    ['artifacts', 'select=id,student_id,lesson_id,project_id,artifact_type,title,storage_bucket,storage_path,external_url,metadata,created_at&order=created_at.desc'],
+    ['parent_portals', 'select=id,student_id,public_title,intro,theme,is_active,created_at,updated_at&order=created_at.asc'],
+    ['content_items', 'select=id,title,platform,pillar,hook,body,status,source_type,source_label,published_at,created_at,updated_at&status=neq.archived&order=updated_at.desc'],
     ['content_metrics', 'select=content_id,captured_at,views,likes,comments,saves,followers_gained,leads&order=captured_at.desc'],
-    ['company_brain', 'select=id,brain_type,title,body,evidence,status,created_by,approved_by,created_at,updated_at&order=updated_at.desc'],
+    ['company_brain', 'select=id,brain_type,title,body,evidence,status,created_by,approved_by,created_at,updated_at&status=neq.archived&order=updated_at.desc'],
     ['decisions', 'select=id,topic,context,decision,rationale,status,proposed_by,approved_by,created_at,approved_at&order=created_at.desc'],
     ['inbox_items', 'select=id,input_type,raw_content,classification,status,created_at&order=created_at.desc&limit=50'],
     ['memory_items', 'select=id,memory_type,entity_type,entity_ref,title,summary,details,source_type,source_ref,importance,status,created_by,approved_by,created_at,updated_at&status=neq.archived&order=importance.desc,updated_at.desc&limit=100']
   ];
-
   const entries = await Promise.all(specs.map(async ([name, q]) => [name, await rest(name, q)]));
   return Object.fromEntries(entries);
 }
@@ -114,7 +108,7 @@ async function studentIdFromPayload(payload) {
   if (payload?.student_id) return String(payload.student_id);
   const slug = text(payload?.student_slug, 120);
   if (!slug) return null;
-  const rows = await rest('students', `select=id&slug=eq.${encodeURIComponent(slug)}&limit=1`);
+  const rows = await rest('students', `select=id,slug&slug=eq.${encodeURIComponent(slug)}&limit=1`);
   return rows[0]?.id || null;
 }
 
@@ -142,7 +136,7 @@ async function handleAction(action, payload = {}) {
       current_level: text(payload.current_level, 300) || null,
       current_project: text(payload.current_project, 500) || null,
       status: ['active','paused','completed'].includes(payload.status) ? payload.status : 'active',
-      progress: num(payload.progress, 0, 100, 0),
+      progress: num(payload.progress, 0, 100, null),
       parent_notes: text(payload.parent_notes) || null
     });
     return { ok: true, student: rows[0] || null };
@@ -166,6 +160,28 @@ async function handleAction(action, payload = {}) {
       ai_generated: Boolean(payload.ai_generated)
     });
     return { ok: true, lesson: rows[0] || null };
+  }
+
+  if (action === 'link_session_student') {
+    const studentId = await studentIdFromPayload(payload);
+    if (!studentId) throw new Error('A valid student is required.');
+    let sessionId = text(payload.session_id, 100);
+    if (!sessionId && payload.session_number != null) {
+      const sessions = await rest('course_sessions', `select=id&session_number=eq.${encodeURIComponent(payload.session_number)}&limit=1`);
+      sessionId = sessions[0]?.id || '';
+    }
+    if (!sessionId) throw new Error('A valid course session is required.');
+    const rows = await insert('student_session_records', {
+      session_id: sessionId,
+      student_id: studentId,
+      track: text(payload.track, 500) || null,
+      achievement: text(payload.achievement) || null,
+      difficulty: text(payload.difficulty) || null,
+      next_step: text(payload.next_step) || null,
+      teacher_note: text(payload.teacher_note) || null,
+      evidence: Array.isArray(payload.evidence) ? payload.evidence : []
+    });
+    return { ok: true, record: rows[0] || null };
   }
 
   if (action === 'save_memory') {
@@ -214,7 +230,7 @@ async function handleAction(action, payload = {}) {
     if (!title) throw new Error('Content title is required.');
     const rows = await insert('content_items', {
       title,
-      platform: text(payload.platform || 'xiaohongshu', 120),
+      platform: text(payload.platform || 'Rednote', 120),
       pillar: text(payload.pillar, 300) || null,
       hook: text(payload.hook) || null,
       body: text(payload.body) || null,
@@ -225,6 +241,38 @@ async function handleAction(action, payload = {}) {
       published_at: payload.published_at || null
     });
     return { ok: true, content: rows[0] || null };
+  }
+
+  if (action === 'generate_parent_access') {
+    const studentId = await studentIdFromPayload(payload);
+    const slug = text(payload.student_slug, 120);
+    if (!studentId || !slug) throw new Error('A valid student is required.');
+    const code = `CYS-${crypto.randomBytes(6).toString('base64url').toUpperCase()}`;
+    const accessCodeHash = crypto.createHash('sha256').update(code).digest('hex');
+    let rows = await patch('parent_portals', `student_id=eq.${encodeURIComponent(studentId)}`, {
+      access_code_hash: accessCodeHash,
+      is_active: true
+    });
+    if (!rows.length) {
+      rows = await insert('parent_portals', {
+        student_id: studentId,
+        public_title: `${slug} · Learning Journey`,
+        intro: 'Private project-based AI learning portfolio.',
+        access_code_hash: accessCodeHash,
+        is_active: true
+      });
+    }
+    return { ok: true, student_slug: slug, code, path: `/parent/${encodeURIComponent(slug)}` };
+  }
+
+  if (action === 'disable_parent_access') {
+    const studentId = await studentIdFromPayload(payload);
+    if (!studentId) throw new Error('A valid student is required.');
+    const rows = await patch('parent_portals', `student_id=eq.${encodeURIComponent(studentId)}`, {
+      access_code_hash: null,
+      is_active: false
+    });
+    return { ok: true, portal: rows[0] || null };
   }
 
   if (action === 'update_inbox_status') {
@@ -240,19 +288,16 @@ async function handleAction(action, payload = {}) {
 
 export default async function handler(req, res) {
   if (!authorized(req)) return res.status(401).json({ error: 'Founder session is missing or invalid.' });
-
   try {
     if (req.method === 'GET') {
       const data = await bootstrap();
       return res.status(200).json({ source: 'supabase', project: 'chongyu-studio-os', data });
     }
-
     if (req.method === 'POST') {
       const { action, payload } = req.body || {};
       const result = await handleAction(action, payload || {});
       return res.status(200).json(result);
     }
-
     return res.status(405).json({ error: 'Method not allowed.' });
   } catch (error) {
     console.error('Studio data API error:', error);
