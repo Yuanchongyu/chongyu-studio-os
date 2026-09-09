@@ -1,27 +1,206 @@
-const D=window.STUDIO_DATA;
-let current='command';let selectedStudent='leo';let lang=localStorage.getItem('studio_lang')||'en';
-const I18N={
- en:{workspace:'WORKSPACE',aiManagers:'AI MANAGERS',command:'Command Center',inbox:'Inbox',students:'Students',lessons:'Lessons',content:'Content Studio',brain:'Company Brain',managers:'Managers',page_command:'Command Center',page_inbox:'Universal Inbox',page_students:'Students',page_lessons:'Lessons',page_content:'Content Studio',page_brain:'Company Brain',page_managers:'AI Managers',founder:'Founder workspace',memory:'Company memory online',capture:'+ Capture',run:'Run',ask:"Ask Studio… e.g. ‘What should Kevin learn next?’",hero:'One founder. Shared company memory. Multiple AI brains.',heroSub:'Your teaching, student growth, parent communication, content and decisions live in one operating system — GPT and Claude become interchangeable intelligence layers, not separate silos.',activeStudents:'Active students',learningPaths:'3 learning paths updated',lessonsMonth:'Lessons this month',artifactsReady:'+3 artifacts ready',contentPipeline:'Content pipeline',draftsReady:'2 drafts ready',companyInsights:'Company insights',oneNew:'1 new this week',chief:'Chief of Staff',weeklyView:'Weekly executive view',chiefLabel:'AI CHIEF OF STAFF',chiefHeadline:'This week’s leverage is not “make more content” — it is turning existing classroom evidence into reusable company assets.',chief1:'Convert Kevin’s cooldown lesson into a parent update and Xiaohongshu draft.',chief2:'Formalize Leo’s API transition as a Level 2 curriculum decision.',chief3:'Turn Amy’s dataset-bias moment into a reusable AI fundamentals lesson.',startWork:'Start today’s work',studentsGlance:'Students at a glance',sharedContext:'Shared context available to every manager',overall:'overall progression',currentProject:'Current project',skillMap:'Skill map',evidenceBacked:'Evidence-backed, not test-score based',projectJourney:'Project journey',age:'Age',lesson:'Lesson',challenge:'Challenge',studentLesson:'Student / lesson',project:'Project',achievement:'Achievement',open:'Open',ideas:'Ideas',drafting:'Drafting',ready:'Ready',published:'Published',everySource:'Every piece keeps its source provenance',title:'Title',pillar:'Pillar',source:'Source',performance:'Performance',views:'views',saves:'saves',brainHero:'Company Brain = what your company has learned, not a dump of every chat.',brainSub:'Insights are evidence-backed and reusable by GPT, Claude and every manager through the same context layer.',evidence:'Evidence',drop:'Drop anything here',dropSub:'Voice note · class observation · screenshot · student code · Claude conversation · content idea · decision',captureSomething:'Capture something',recentCaptures:'Recent captures',classified:'Classified before write-back',managerChief:'Cross-company priorities, weekly review and decision proposals.',managerEdu:'Student progress, curriculum, lesson design and learning evidence.',managerContent:'Turns real teaching artifacts into Xiaohongshu-ready content.',managerCode:'Builds demos, student projects and the Studio OS itself.',preferred:'Preferred',sharedState:'Shared-state rule',sharedStateHero:'Agents do not share chat. They share approved company state.',sharedStateSub:'Each manager reads a fresh context package from Studio Memory, performs a workflow, then writes structured outcomes back with provenance. This is what keeps GPT and Claude transparent and consistent.',captureTitle:'Capture a class note, decision or idea',capturePlaceholder:'Example: Today Kevin built gesture control. It kept triggering repeatedly, then he proposed adding a cooldown…',cancel:'Cancel',process:'Process & write back',newCapture:'New Capture',awaiting:'Awaiting AI classification',contextEngine:'CONTEXT ENGINE',resolveFirst:'Studio would resolve this request first',yourRequest:'Your request',contextPackage:'Context package',contextExplain:'Global company rules + relevant manager role + active entity/page + task-specific records + relevant Company Brain evidence.',prototypeNote:'This prototype stops before calling a live model. In the production version, this package is sent to GPT or Claude through the AI Gateway, then structured outcomes are written back to Studio Memory.',gotIt:'Got it',statusIdea:'Idea',statusDraft:'Draft',statusReady:'Ready',statusPublished:'Published',statusProcessed:'Processed',statusProposed:'Proposed',statusActive:'Active',managerTitle:'AI MANAGER',codingPartner:'Coding Partner',educationManager:'Education Manager',contentManager:'Content Manager',chiefOfStaff:'Chief of Staff'},
- zh:{workspace:'工作台',aiManagers:'AI 经理',command:'指挥中心',inbox:'收件箱',students:'学生',lessons:'课程记录',content:'内容工作室',brain:'公司大脑',managers:'经理团队',page_command:'指挥中心',page_inbox:'统一收件箱',page_students:'学生',page_lessons:'课程记录',page_content:'内容工作室',page_brain:'公司大脑',page_managers:'AI 经理',founder:'创始人工作台',memory:'公司记忆在线',capture:'+ 记录',run:'运行',ask:'问 Studio… 例如“Kevin 下一节该学什么？”',hero:'一个创始人。一份共享公司记忆。多个 AI 大脑。',heroSub:'你的教学、学生成长、家长沟通、内容和决策都沉淀在同一个操作系统里——GPT 和 Claude 是可切换的智能层，而不是彼此隔离的信息孤岛。',activeStudents:'活跃学生',learningPaths:'3 条学习路径已更新',lessonsMonth:'本月课程',artifactsReady:'+3 个课程成果待整理',contentPipeline:'内容管线',draftsReady:'2 篇草稿待处理',companyInsights:'公司洞察',oneNew:'本周新增 1 条',chief:'Chief of Staff',weeklyView:'每周经营视图',chiefLabel:'AI CHIEF OF STAFF',chiefHeadline:'本周真正有杠杆的事情不是“多发内容”，而是把已有课堂证据变成可以反复复用的公司资产。',chief1:'把 Kevin 的 cooldown 课程转成家长反馈和小红书草稿。',chief2:'把 Leo 的 API 过渡正式沉淀为 Level 2 课程决策。',chief3:'把 Amy 的数据集偏差案例沉淀为可复用的 AI 基础课程。',startWork:'开始今天的工作',studentsGlance:'学生概览',sharedContext:'所有经理都可读取同一份共享上下文',overall:'整体进度',currentProject:'当前项目',skillMap:'能力地图',evidenceBacked:'基于真实证据，而不是考试分数',projectJourney:'项目成长路径',age:'年龄',lesson:'第',challenge:'挑战',studentLesson:'学生 / 课程',project:'项目',achievement:'成果',open:'打开',ideas:'灵感',drafting:'草稿',ready:'待发布',published:'已发布',everySource:'每篇内容都保留来源追踪',title:'标题',pillar:'内容支柱',source:'来源',performance:'表现',views:'浏览',saves:'收藏',brainHero:'Company Brain = 公司真正学到的东西，而不是所有聊天记录的垃圾堆。',brainSub:'所有洞察都有证据来源，并通过同一个 Context Layer 被 GPT、Claude 和各个经理复用。',evidence:'证据',drop:'任何东西都可以丢到这里',dropSub:'语音笔记 · 课堂观察 · 截图 · 学生代码 · Claude 对话 · 内容灵感 · 决策',captureSomething:'记录一条内容',recentCaptures:'最近记录',classified:'写回数据库前先分类',managerChief:'跨公司优先级、每周经营复盘与决策建议。',managerEdu:'学生成长、课程设计、备课与学习证据。',managerContent:'把真实教学成果转化为可发布的小红书内容。',managerCode:'构建 Demo、学生项目以及 Studio OS 本身。',preferred:'优先模型',sharedState:'共享状态原则',sharedStateHero:'Agent 不共享聊天记录，它们共享经过确认的公司状态。',sharedStateSub:'每个经理都从 Studio Memory 读取一份最新 Context Package，执行工作流，再把结构化结果连同来源写回。GPT 和 Claude 因此保持透明、一致。',captureTitle:'记录一条课堂笔记、决策或灵感',capturePlaceholder:'例如：今天 Kevin 做 gesture control，一开始连续触发，后来他自己提出加 cooldown……',cancel:'取消',process:'处理并写回',newCapture:'新记录',awaiting:'等待 AI 分类',contextEngine:'上下文引擎',resolveFirst:'Studio 会先解析这条请求',yourRequest:'你的请求',contextPackage:'上下文包',contextExplain:'全局公司规则 + 对应经理角色 + 当前页面/实体 + 任务相关记录 + Company Brain 中的相关证据。',prototypeNote:'这个原型目前停在真正调用模型之前。生产版会把这份上下文包发送给 GPT 或 Claude，再把结构化结果写回 Studio Memory。',gotIt:'知道了',statusIdea:'灵感',statusDraft:'草稿',statusReady:'待发布',statusPublished:'已发布',statusProcessed:'已处理',statusProposed:'待确认',statusActive:'学习中',managerTitle:'AI 经理',codingPartner:'编程搭档',educationManager:'教育经理',contentManager:'内容经理',chiefOfStaff:'Chief of Staff'}
+const D = window.STUDIO_DATA;
+let current = 'command';
+let selectedStudent = 'marcos';
+let lang = localStorage.getItem('studio_lang') || 'zh';
+
+const I18N = {
+  en: {
+    founder:'Founder Control Deck', command:'Command Center', students:'Students', sessions:'Course Sessions', inbox:'Inbox', content:'Content Studio', brain:'Company Brain', workflows:'AI Workflows', parent:'Parent Share',
+    page_command:'Command Center', page_students:'Student Intelligence', page_sessions:'Course Sessions', page_inbox:'Universal Inbox', page_content:'Content Studio', page_brain:'Company Brain', page_workflows:'Operating Modes', page_parent:'Parent Share',
+    capture:'+ Capture', activeStudents:'Active students', sessionsImported:'Real sessions imported', publishedStories:'Published stories', memoryAssets:'Memory assets',
+    hero:'Learning evidence, not just lesson notes.', heroSub:'One shared system turns every class into student growth, parent visibility, reusable curriculum and publishable stories.',
+    latestJourney:'Latest learning journey', openStudent:'Open student', currentProject:'Current project', learningStage:'Learning stage', noAge:'Age not set',
+    studentTimeline:'Student timeline', mappingPending:'Per-student lesson mapping is pending. The real class sessions are already stored and ready to link.',
+    skillMap:'Growth signals', evidenceBacked:'Evidence-backed, not test-score based', sessionArchive:'Real course archive', source:'Source', concepts:'Concepts', highlights:'Highlights', teacherReflection:'Teacher reflection',
+    mediaEvidence:'Media evidence', sourceMedia:'Source media', openRednote:'Open Rednote source', contentPipeline:'Published content', companyMemory:'Reusable company memory',
+    parentIntro:'Private parent portals turn learning progress into something families can actually see.', portalInactive:'Not shared yet', portalActive:'Live', generateAccess:'Generate link + code', disableAccess:'Disable access',
+    workflowHero:'One AI operator. Multiple operating modes.', workflowSub:'You keep talking to ChatGPT. These modes simply decide what context, data and SOPs should be used.',
+    weeklyReview:'Weekly Executive Review', educationReview:'Education Review', contentReview:'Content Mining', parentUpdate:'Parent Update', memoryCurator:'Memory Curator',
+    inboxEmpty:'Nothing waiting in the Inbox.', memoryOnline:'Company memory online', noStudentSessions:'No student-specific session links yet.', lessons:'Lessons', evidence:'Evidence',
+    statusPublished:'Published', statusReady:'Ready', statusDraft:'Draft', statusIdea:'Idea', statusProcessed:'Processed', statusProposed:'Proposed'
+  },
+  zh: {
+    founder:'创始人控制台', command:'指挥中心', students:'学生', sessions:'真实课程', inbox:'收件箱', content:'内容工作室', brain:'公司大脑', workflows:'AI 工作流', parent:'家长分享',
+    page_command:'指挥中心', page_students:'学生成长档案', page_sessions:'真实课程记录', page_inbox:'统一收件箱', page_content:'内容工作室', page_brain:'公司大脑', page_workflows:'AI 工作模式', page_parent:'家长分享',
+    capture:'+ 记录', activeStudents:'活跃学生', sessionsImported:'已导入真实课程', publishedStories:'已发布故事', memoryAssets:'公司记忆资产',
+    hero:'不只是课程记录，而是可追踪的成长证据。', heroSub:'每一节课同时沉淀成学生成长、家长可见进度、可复用课程资产和真实内容素材。',
+    latestJourney:'最新学习路径', openStudent:'查看学生', currentProject:'当前项目', learningStage:'学习阶段', noAge:'年龄待补',
+    studentTimeline:'个人成长时间线', mappingPending:'学生与每节课的精确分支还需要补一次映射；四节真实课程已经完整入库，随时可以关联。',
+    skillMap:'成长信号', evidenceBacked:'来自真实项目证据，而不是考试分数', sessionArchive:'真实课程档案', source:'来源', concepts:'关键概念', highlights:'课堂亮点', teacherReflection:'老师手记',
+    mediaEvidence:'影像证据', sourceMedia:'课程素材', openRednote:'打开小红书原帖', contentPipeline:'已发布内容', companyMemory:'可复用公司记忆',
+    parentIntro:'给每个孩子一个私密成长主页，让家长能持续看到课程、项目、作品和老师反馈。', portalInactive:'尚未分享', portalActive:'已开启', generateAccess:'生成链接 + 密码', disableAccess:'关闭访问',
+    workflowHero:'一个 AI 操作员，多种工作模式。', workflowSub:'你继续直接和 ChatGPT 聊。这里的“经理”不再是独立聊天，而是决定该读取什么数据、调用什么 SOP。',
+    weeklyReview:'每周经营复盘', educationReview:'教育经理 Review', contentReview:'内容挖掘', parentUpdate:'家长反馈', memoryCurator:'记忆整理',
+    inboxEmpty:'收件箱目前没有待处理内容。', memoryOnline:'公司记忆在线', noStudentSessions:'还没有绑定到这个孩子的个人课程记录。', lessons:'课程', evidence:'证据',
+    statusPublished:'已发布', statusReady:'待发布', statusDraft:'草稿', statusIdea:'灵感', statusProcessed:'已处理', statusProposed:'待处理'
+  }
 };
-const t=(k)=>I18N[lang][k]||I18N.en[k]||k;const tx=(v)=>typeof v==='object'&&v!==null&&('en'in v||'zh'in v)?(v[lang]||v.en||v.zh):v;
-const statusLabel=s=>t('status'+s)||s;
-const navGroups=()=>[[t('workspace'),[['command','⌂',t('command')],['inbox','◎',t('inbox')],['students','♟',t('students')],['lessons','▤',t('lessons')],['content','✦',t('content')],['brain','◈',t('brain')]]],[t('aiManagers'),[['managers','✦',t('managers')]]]];
-function setLanguage(next){lang=next;localStorage.setItem('studio_lang',lang);document.documentElement.lang=lang==='zh'?'zh-CN':'en';refreshChrome();renderNav();render()}
-function refreshChrome(){document.getElementById('workspaceLabel').innerText=t('founder');document.getElementById('memoryStatus').innerText=t('memory');document.getElementById('captureBtn').innerText=t('capture');document.getElementById('runBtn').innerText=t('run');document.getElementById('aiInput').placeholder=t('ask');document.getElementById('pageTitle').innerText=t('page_'+current);document.getElementById('langEn').classList.toggle('active',lang==='en');document.getElementById('langZh').classList.toggle('active',lang==='zh')}
-function renderNav(){const n=document.getElementById('nav');n.innerHTML=navGroups().map(g=>`<div class="nav-section">${g[0]}</div>${g[1].map(i=>`<div class="nav-item ${current===i[0]?'active':''}" onclick="go('${i[0]}')">${i[1]} <span>${i[2]}</span></div>`).join('')}`).join('')}
-function go(p){current=p;refreshChrome();renderNav();render()}
-function metric(label,val,delta=''){return `<div class="card"><div class="metric-label">${label}</div><div class="metric">${val}</div>${delta?`<div class="delta">${delta}</div>`:''}</div>`}
-function render(){const c=document.getElementById('content');if(current==='command')c.innerHTML=command();if(current==='students')c.innerHTML=students();if(current==='lessons')c.innerHTML=lessons();if(current==='content')c.innerHTML=contentStudio();if(current==='brain')c.innerHTML=brain();if(current==='inbox')c.innerHTML=inbox();if(current==='managers')c.innerHTML=managers()}
-function command(){return `<div class="hero-line">${t('hero')}</div><p class="hero-sub">${t('heroSub')}</p><div class="grid grid-4">${metric(t('activeStudents'),D.students.length,t('learningPaths'))}${metric(t('lessonsMonth'),'9',t('artifactsReady'))}${metric(t('contentPipeline'),D.content.length,t('draftsReady'))}${metric(t('companyInsights'),D.brain.length,t('oneNew'))}</div><div class="section-title"><h2>${t('chief')}</h2><span>${t('weeklyView')}</span></div><div class="chief"><div class="label">${t('chiefLabel')}</div><h3>${t('chiefHeadline')}</h3><ol><li>${t('chief1')}</li><li>${t('chief2')}</li><li>${t('chief3')}</li></ol><button class="primary" onclick="go('inbox')">${t('startWork')}</button></div><div class="section-title"><h2>${t('studentsGlance')}</h2><span>${t('sharedContext')}</span></div><div class="grid grid-3">${D.students.map(s=>`<div class="card" onclick="selectedStudent='${s.id}';go('students')" style="cursor:pointer"><div class="row"><div class="avatar">${s.name[0]}</div><div><strong>${s.name}</strong><div class="subtle">${tx(s.level)}</div></div></div><p>${tx(s.project)}</p><div class="progress"><i style="width:${s.progress}%"></i></div><div class="subtle" style="margin-top:8px">${s.progress}% ${t('overall')}</div></div>`).join('')}</div>`}
-function students(){const s=D.students.find(x=>x.id===selectedStudent)||D.students[0];return `<div class="grid grid-3"><div class="card">${D.students.map(x=>`<div class="row" style="padding:10px;border-radius:10px;cursor:pointer;${x.id===s.id?'background:#f1f5f9':''}" onclick="selectedStudent='${x.id}';render()"><div class="avatar">${x.name[0]}</div><div><strong>${x.name}</strong><div class="subtle">${tx(x.project)}</div></div></div>`).join('')}</div><div class="card" style="grid-column:span 2"><div class="row"><div class="avatar" style="width:58px;height:58px;font-size:20px">${s.name[0]}</div><div><h2 style="margin:0">${s.name}</h2><div class="subtle">${t('age')} ${s.age} · ${tx(s.level)}</div></div><span class="pill green" style="margin-left:auto">${tx(s.status)}</span></div><div class="section-title"><h2>${t('currentProject')}</h2></div><strong>${tx(s.project)}</strong><div class="section-title"><h2>${t('skillMap')}</h2><span>${t('evidenceBacked')}</span></div><div class="skill-grid">${Object.entries(s.skills).map(([k,v])=>`<div class="skill"><div class="skill-head"><span>${tx(D.skillLabels[k]||k)}</span><strong>${v}/10</strong></div><div class="progress"><i style="width:${v*10}%"></i></div></div>`).join('')}</div><div class="section-title"><h2>${t('projectJourney')}</h2></div><div class="timeline">${s.lessons.map(l=>`<div class="timeline-item"><strong>${lang==='zh'?`第 ${l.n} 课`:`Lesson ${l.n}`} · ${tx(l.title)}</strong><br><small>${l.date}</small><p>${tx(l.achievement)}</p><div class="subtle">${t('challenge')}: ${tx(l.difficulty)}</div></div>`).join('')}</div></div></div>`}
-function lessons(){const all=D.students.flatMap(s=>s.lessons.map(l=>({...l,student:s.name,project:s.project}))).sort((a,b)=>b.n-a.n);return `<div class="card"><div class="lesson-row"><strong>${t('studentLesson')}</strong><strong>${t('project')}</strong><strong>${t('achievement')}</strong><strong>${t('challenge')}</strong><span></span></div>${all.map(l=>`<div class="lesson-row"><div><strong>${l.student}</strong><div class="subtle">${lang==='zh'?`第 ${l.n} 课`:`Lesson ${l.n}`} · ${tx(l.title)}</div></div><div>${tx(l.project)}</div><div>${tx(l.achievement)}</div><div>${tx(l.difficulty)}</div><button class="mini-btn">${t('open')}</button></div>`).join('')}</div>`}
-function contentStudio(){return `<div class="grid grid-4">${metric(t('ideas'),D.content.filter(x=>x.status==='Idea').length)}${metric(t('drafting'),D.content.filter(x=>x.status==='Draft').length)}${metric(t('ready'),D.content.filter(x=>x.status==='Ready').length)}${metric(t('published'),D.content.filter(x=>x.status==='Published').length)}</div><div class="section-title"><h2>${t('contentPipeline')}</h2><span>${t('everySource')}</span></div><div class="card"><div class="content-row"><strong>${t('title')}</strong><strong>${t('pillar')}</strong><strong>${t('source')}</strong><strong>${t('performance')}</strong><span>Status</span></div>${D.content.map(x=>`<div class="content-row"><strong>${tx(x.title)}</strong><div>${tx(x.pillar)}</div><div class="subtle">${tx(x.source)}</div><div>${x.views?`${x.views.toLocaleString()} ${t('views')} · ${x.saves} ${t('saves')}`:'—'}</div><span class="pill ${x.status==='Published'?'green':x.status==='Draft'?'orange':''}">${statusLabel(x.status)}</span></div>`).join('')}</div>`}
-function brain(){return `<div class="hero-line" style="font-size:28px">${t('brainHero')}</div><p class="hero-sub">${t('brainSub')}</p><div class="grid grid-2">${D.brain.map(b=>`<div class="card brain-card"><div class="subtle">${tx(b.type)}</div><h3>${tx(b.title)}</h3><p>${tx(b.body)}</p><div class="subtle">${t('evidence')} · ${b.evidence.map(tx).join(' · ')}</div></div>`).join('')}</div>`}
-function inbox(){return `<div class="card"><h3 style="margin-top:0">${t('drop')}</h3><p class="subtle">${t('dropSub')}</p><button class="primary" onclick="openInboxComposer()">${t('captureSomething')}</button></div><div class="section-title"><h2>${t('recentCaptures')}</h2><span>${t('classified')}</span></div>${D.inbox.map(x=>`<div class="inbox-item"><div class="inbox-icon">✦</div><div><strong>${tx(x.title)}</strong><div><span class="tag">${tx(x.type)}</span><span class="tag">${tx(x.meta)}</span></div></div><span class="pill ${x.status==='Processed'?'green':''}">${statusLabel(x.status)}</span></div>`).join('')}`}
-function managers(){const m=[[t('chiefOfStaff'),t('managerChief'),'GPT / Auto'],[t('educationManager'),t('managerEdu'),'GPT or Claude'],[t('contentManager'),t('managerContent'),'GPT'],[t('codingPartner'),t('managerCode'),'Claude']];return `<div class="grid grid-2">${m.map(x=>`<div class="card manager"><div class="subtle">${t('managerTitle')}</div><h3>${x[0]}</h3><p>${x[1]}</p><span class="pill">${t('preferred')}: ${x[2]}</span></div>`).join('')}</div><div class="section-title"><h2>${t('sharedState')}</h2></div><div class="card"><div class="hero-line" style="font-size:26px">${t('sharedStateHero')}</div><p class="hero-sub">${t('sharedStateSub')}</p></div>`}
-function openInboxComposer(){document.getElementById('modal').classList.remove('hidden');document.getElementById('modal').innerHTML=`<div class="modal-card"><div class="subtle">UNIVERSAL INBOX</div><h2>${t('captureTitle')}</h2><textarea id="captureText" placeholder="${t('capturePlaceholder')}"></textarea><div class="modal-actions"><button class="ghost" onclick="closeModal()">${t('cancel')}</button><button class="primary" onclick="processCapture()">${t('process')}</button></div></div>`}
-function closeModal(){document.getElementById('modal').classList.add('hidden')}
-function processCapture(){const text=document.getElementById('captureText').value.trim();if(!text)return;D.inbox.unshift({type:{en:t('newCapture'),zh:t('newCapture')},title:{en:text.slice(0,58)+(text.length>58?'…':''),zh:text.slice(0,58)+(text.length>58?'…':'')},meta:{en:t('awaiting'),zh:t('awaiting')},status:'Processed'});closeModal();go('inbox')}
-function askStudio(){const q=document.getElementById('aiInput').value.trim();if(!q)return;const model=document.getElementById('modelSelect').value;document.getElementById('modal').classList.remove('hidden');document.getElementById('modal').innerHTML=`<div class="modal-card"><div class="subtle">${t('contextEngine')} · ${model}</div><h2>${t('resolveFirst')}</h2><p><strong>${t('yourRequest')}:</strong> ${q}</p><div class="card"><strong>${t('contextPackage')}</strong><p class="subtle">${t('contextExplain')}</p></div><p>${t('prototypeNote')}</p><div class="modal-actions"><button class="primary" onclick="closeModal()">${t('gotIt')}</button></div></div>`}
+
+const t = key => I18N[lang][key] || I18N.en[key] || key;
+const tx = value => typeof value === 'object' && value && ('en' in value || 'zh' in value) ? (value[lang] || value.en || value.zh || '') : (value ?? '');
+const esc = value => String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+const pills = (items=[]) => items.slice(0,8).map(x=>`<span class="chip">${esc(x)}</span>`).join('');
+const statusText = s => t(`status${s}`) || s;
+
+function navGroups() {
+  return [
+    ['STUDIO', [
+      ['command','◈',t('command')], ['students','◉',t('students')], ['sessions','⌁',t('sessions')], ['inbox','◎',t('inbox')], ['content','✦',t('content')], ['brain','◇',t('brain')]
+    ]],
+    ['OPERATIONS', [
+      ['workflows','⚡',t('workflows')], ['parent','↗',t('parent')]
+    ]]
+  ];
+}
+
+function setLanguage(next) {
+  lang = next; localStorage.setItem('studio_lang', lang); document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  refreshChrome(); renderNav(); render();
+}
+
+function refreshChrome() {
+  const workspace = document.getElementById('workspaceLabel'); if (workspace) workspace.textContent = t('founder');
+  const title = document.getElementById('pageTitle'); if (title) title.textContent = t(`page_${current}`);
+  const capture = document.getElementById('captureBtn'); if (capture) capture.textContent = t('capture');
+  const en = document.getElementById('langEn'); if (en) en.classList.toggle('active', lang === 'en');
+  const zh = document.getElementById('langZh'); if (zh) zh.classList.toggle('active', lang === 'zh');
+}
+
+function renderNav() {
+  const nav = document.getElementById('nav');
+  nav.innerHTML = navGroups().map(([label,items]) => `<div class="nav-section">${label}</div>${items.map(i=>`<button class="nav-item ${current===i[0]?'active':''}" onclick="go('${i[0]}')"><span class="nav-icon">${i[1]}</span><span>${i[2]}</span></button>`).join('')}`).join('');
+}
+
+function go(page) { current = page; refreshChrome(); renderNav(); render(); }
+function closeModal() { document.getElementById('modal')?.classList.add('hidden'); }
+
+function metric(label,value,meta,icon) {
+  return `<div class="metric-card glass"><div class="metric-icon">${icon}</div><div><div class="metric-label">${label}</div><div class="metric">${value}</div><div class="delta">${meta}</div></div></div>`;
+}
+
+function digitalAvatar(student, large=false) {
+  const initials = esc((student?.name || '?').slice(0,2).toUpperCase());
+  return `<div class="digital-avatar ${large?'large':''}"><div class="avatar-ring"></div><div class="avatar-core">${initials}</div><div class="avatar-node n1"></div><div class="avatar-node n2"></div></div>`;
+}
+
+function commandPage() {
+  const stats = D.liveStats || { students:D.students?.length||0, sessions:D.sessions?.length||0, content:D.content?.length||0, brain:D.brain?.length||0 };
+  const latest = (D.sessions || []).slice(-3).reverse();
+  return `<section class="hero-panel glass">
+    <div><div class="eyebrow cyan">CHONGYU STUDIO · LIVE MEMORY</div><h2>${t('hero')}</h2><p>${t('heroSub')}</p></div>
+    <div class="orbital-mark"><span></span><i></i><b></b></div>
+  </section>
+  <div class="grid grid-4 metrics-row">
+    ${metric(t('activeStudents'),stats.students,lang==='zh'?'Marcos · Mason':'Marcos · Mason','◉')}
+    ${metric(t('sessionsImported'),stats.sessions,lang==='zh'?'来自真实课堂记录':'From real class records','⌁')}
+    ${metric(t('publishedStories'),stats.content,lang==='zh'?'小红书真实内容':'Real Rednote stories','✦')}
+    ${metric(t('memoryAssets'),stats.brain,lang==='zh'?'可被 ChatGPT 直接检索':'Directly retrievable by ChatGPT','◇')}
+  </div>
+  <div class="section-title"><div><div class="eyebrow">STUDENT SIGNAL</div><h3>${t('latestJourney')}</h3></div><span>${t('memoryOnline')}</span></div>
+  <div class="grid grid-2">${(D.students||[]).map(studentCard).join('')}</div>
+  <div class="section-title"><div><div class="eyebrow">COURSE ARCHIVE</div><h3>${t('sessionArchive')}</h3></div><button class="text-btn" onclick="go('sessions')">${lang==='zh'?'查看全部 →':'View all →'}</button></div>
+  <div class="session-strip">${latest.map(sessionMini).join('')}</div>`;
+}
+
+function studentCard(s) {
+  const count = (s.sessions?.length || 0) + (s.lessons?.length || 0);
+  return `<article class="student-card glass" onclick="selectedStudent='${esc(s.id)}';go('students')">
+    <div class="student-card-top">${digitalAvatar(s)}<div class="grow"><div class="eyebrow">LEARNING PROFILE</div><h3>${esc(s.name)}</h3><p>${esc(tx(s.level))}</p></div><span class="signal-badge">LIVE</span></div>
+    <div class="project-box"><span>${t('currentProject')}</span><strong>${esc(tx(s.project))}</strong></div>
+    <div class="student-stats"><div><b>${count}</b><span>${t('lessons')}</span></div><div><b>${Object.keys(s.skills||{}).length}</b><span>${t('skillMap')}</span></div><div><b>${D.artifacts?.filter(a=>a.student_id===s.dbId).length||0}</b><span>${t('evidence')}</span></div></div>
+  </article>`;
+}
+
+function sessionMini(s) {
+  const type = s.media?.[0]?.type || 'session';
+  return `<article class="session-mini glass"><div class="media-icon ${type}">${type==='video'?'▶':type==='image'?'▧':type==='hardware'?'⌁':'✦'}</div><div><div class="eyebrow">SESSION ${esc(s.n)}</div><strong>${esc(tx(s.title))}</strong><p>${esc(tx(s.summary)).slice(0,150)}${tx(s.summary).length>150?'…':''}</p></div></article>`;
+}
+
+function studentsPage() {
+  const s = D.students?.find(x=>x.id===selectedStudent) || D.students?.[0];
+  if (!s) return `<div class="empty">No active students.</div>`;
+  const linked = [...(s.sessions||[]), ...(s.lessons||[])];
+  return `<div class="student-layout">
+    <aside class="student-selector glass">${D.students.map(x=>`<button class="student-select ${x.id===s.id?'active':''}" onclick="selectedStudent='${esc(x.id)}';render()">${digitalAvatar(x)}<span><strong>${esc(x.name)}</strong><small>${esc(tx(x.project))}</small></span></button>`).join('')}</aside>
+    <section class="student-profile glass">
+      <div class="profile-hero">${digitalAvatar(s,true)}<div class="grow"><div class="eyebrow cyan">STUDENT DIGITAL TWIN</div><h2>${esc(s.name)}</h2><p>${esc(tx(s.level))}</p><div class="hero-chips"><span class="chip">${s.age ? `${t('learningStage')} · ${s.age}` : t('noAge')}</span><span class="chip cyan">${esc(tx(s.project))}</span></div></div><button class="ghost" onclick="go('parent')">${lang==='zh'?'家长分享 ↗':'Parent share ↗'}</button></div>
+      <div class="section-title compact"><div><div class="eyebrow">PROJECT</div><h3>${t('currentProject')}</h3></div></div><div class="project-console"><div class="console-line"><span>01</span><b>${esc(tx(s.project))}</b></div><div class="console-line"><span>02</span><b>${esc(tx(s.level))}</b></div><div class="console-line"><span>03</span><b>${linked.length} ${lang==='zh'?'条成长记录':'growth records'}</b></div></div>
+      <div class="section-title compact"><div><div class="eyebrow">SIGNALS</div><h3>${t('skillMap')}</h3></div><span>${t('evidenceBacked')}</span></div>
+      ${Object.keys(s.skills||{}).length ? `<div class="skill-grid">${Object.entries(s.skills).map(([k,v])=>`<div class="skill"><div class="skill-head"><span>${esc(k)}</span><strong>${v}/10</strong></div><div class="progress"><i style="width:${Math.min(100,v*10)}%"></i></div></div>`).join('')}</div>` : `<div class="signal-empty"><span>◌</span><div><strong>${lang==='zh'?'技能雷达等待真实证据':'Skill radar awaits evidence'}</strong><p>${lang==='zh'?'我们不会为了好看而编造分数；后续从每节课的真实行为证据更新。':'We will not invent scores for decoration; signals will be updated from real session evidence.'}</p></div></div>`}
+      <div class="section-title compact"><div><div class="eyebrow">TIMELINE</div><h3>${t('studentTimeline')}</h3></div></div>
+      ${linked.length ? `<div class="timeline">${linked.map(x=>`<div class="timeline-item"><span class="timeline-dot"></span><div class="eyebrow">SESSION ${esc(x.n||'')}</div><h4>${esc(tx(x.title))}</h4><p>${esc(tx(x.achievement||x.track||''))}</p>${tx(x.difficulty||'')?`<small>${t('challenge')||'Challenge'} · ${esc(tx(x.difficulty))}</small>`:''}</div>`).join('')}</div>` : `<div class="notice-card"><b>${lang==='zh'?'真实课程已入库，个人映射待确认':'Real sessions are imported; student mapping is pending'}</b><p>${t('mappingPending')}</p></div>`}
+    </section>
+  </div>`;
+}
+
+function sessionsPage() {
+  return `<div class="page-intro"><div><div class="eyebrow cyan">REAL CLASSROOM DATA</div><h2>${t('sessionArchive')}</h2><p>${lang==='zh'?'这四节不是 demo，而是从你真实发布的课堂记录整理出来的课程资产。':'These are reconstructed from your real published classroom records, not demo data.'}</p></div></div>
+  <div class="session-grid">${(D.sessions||[]).map(sessionCard).join('')}</div>`;
+}
+
+function sessionCard(s) {
+  const media = s.media?.[0];
+  return `<article class="session-card glass">
+    <div class="session-visual ${media?.type||'session'}"><div class="session-number">0${esc(s.n)}</div><div class="visual-orbit"></div><div class="visual-icon">${media?.type==='video'?'▶':media?.type==='hardware'?'⌁':'✦'}</div><small>${esc(media?.label||'Project evidence')}</small></div>
+    <div class="session-body"><div class="eyebrow">SESSION ${esc(s.n)} · ${esc(s.sourcePlatform||'')}</div><h3>${esc(tx(s.title))}</h3><p>${esc(tx(s.summary))}</p><div class="label-row"><span>${t('concepts')}</span>${pills(s.concepts)}</div><div class="highlight-list">${(s.highlights||[]).slice(0,4).map(x=>`<div><span>✓</span>${esc(x)}</div>`).join('')}</div><div class="reflection"><span>“</span><p>${esc(tx(s.reflection))}</p></div>${s.sourceUrl?`<a class="source-link" href="${esc(s.sourceUrl)}" target="_blank" rel="noopener">${t('openRednote')} ↗</a>`:''}</div>
+  </article>`;
+}
+
+function contentPage() {
+  const content = D.content || [];
+  return `<div class="page-intro"><div><div class="eyebrow cyan">REAL STORIES</div><h2>${t('contentPipeline')}</h2><p>${lang==='zh'?'内容不再是孤立文案，而是和真实课程、学生成长、媒体证据绑定。':'Content stays connected to real sessions, student growth and evidence.'}</p></div></div>
+  <div class="content-board">${content.map(c=>`<article class="content-card glass"><div class="row between"><span class="chip cyan">${esc(tx(c.pillar))}</span><span class="status-dot-text">${statusText(c.status)}</span></div><h3>${esc(tx(c.title))}</h3><p>${esc(tx(c.hook||c.body||''))}</p><div class="content-meta"><span>${t('source')}: ${esc(tx(c.source))}</span><span>${c.views==null?'—':c.views} views</span></div></article>`).join('')}</div>`;
+}
+
+function brainPage() {
+  return `<div class="page-intro"><div><div class="eyebrow cyan">COMPANY MEMORY</div><h2>${t('companyMemory')}</h2><p>${lang==='zh'?'这里存“公司真正学到了什么”，不是把每段聊天原封不动塞进数据库。':'This stores what the company actually learned, not raw chat transcripts.'}</p></div></div>
+  <div class="brain-grid">${(D.brain||[]).map(b=>`<article class="brain-card glass"><div class="eyebrow">${esc(tx(b.type))}</div><h3>${esc(tx(b.title))}</h3><p>${esc(tx(b.body))}</p>${b.evidence?.length?`<div class="evidence-row">${b.evidence.map(e=>`<span class="chip">${esc(tx(e))}</span>`).join('')}</div>`:''}</article>`).join('')}</div>`;
+}
+
+function inboxPage() {
+  const items = D.inbox || [];
+  return `<div class="page-intro"><div><div class="eyebrow cyan">UNIVERSAL INBOX</div><h2>${lang==='zh'?'低摩擦输入，高质量沉淀':'Low-friction capture, high-quality memory'}</h2><p>${lang==='zh'?'先记录，再由 ChatGPT 整理成课程、决策、内容或长期记忆。':'Capture first; ChatGPT can later structure it into lessons, decisions, content or durable memory.'}</p></div><button class="primary" onclick="openInboxComposer()">${t('capture')}</button></div>
+  ${items.length?`<div class="inbox-list">${items.map(i=>`<article class="inbox-item glass"><div class="inbox-icon">◎</div><div><div class="eyebrow">${esc(tx(i.type))}</div><h4>${esc(tx(i.title)).slice(0,220)}</h4><small>${esc(tx(i.meta))}</small></div><span class="chip">${statusText(i.status)}</span></article>`).join('')}</div>`:`<div class="empty glass">${t('inboxEmpty')}</div>`}`;
+}
+
+function workflowsPage() {
+  const modes = [
+    ['◈',t('weeklyReview'),lang==='zh'?'扫描课程、内容、Inbox、决策，输出本周最值得推进的 3 件事。':'Scan lessons, content, inbox and decisions and return the top three priorities.'],
+    ['◉',t('educationReview'),lang==='zh'?'读取单个学生的最近课程、项目证据和教学原则，决定下一步。':'Read one student’s recent work, evidence and teaching principles to decide what comes next.'],
+    ['✦',t('contentReview'),lang==='zh'?'从真实课程里挖出值得发的小红书故事，而不是凭空造选题。':'Mine real lessons for stories worth publishing instead of inventing topics.'],
+    ['↗',t('parentUpdate'),lang==='zh'?'把技术成果翻译成家长能看懂的成长变化。':'Translate technical outcomes into visible growth parents can understand.'],
+    ['◇',t('memoryCurator'),lang==='zh'?'把长对话压缩成一条值得长期保存的决策、规律或学生观察。':'Compress long discussions into durable decisions, patterns or student observations.']
+  ];
+  return `<section class="hero-panel glass"><div><div class="eyebrow cyan">OPERATING MODES</div><h2>${t('workflowHero')}</h2><p>${t('workflowSub')}</p></div><div class="operator-badge">GPT<br><small>PRIMARY</small></div></section><div class="workflow-grid">${modes.map(m=>`<article class="workflow-card glass"><div class="workflow-icon">${m[0]}</div><h3>${m[1]}</h3><p>${m[2]}</p><div class="workflow-footer"><span>Shared Supabase context</span><span>→ ChatGPT</span></div></article>`).join('')}</div>`;
+}
+
+async function generateParentAccess(slug) {
+  try {
+    const result = await window.studioAction('generate_parent_access',{student_slug:slug});
+    const base = location.origin;
+    const modal = document.getElementById('modal'); modal.classList.remove('hidden');
+    modal.innerHTML = `<div class="modal-card glass"><div class="eyebrow cyan">PARENT PORTAL</div><h2>${lang==='zh'?'家长访问已生成':'Parent access created'}</h2><div class="share-box"><label>Link</label><code>${esc(base+result.path)}</code><label>${lang==='zh'?'一次性显示的访问密码':'Access code shown once'}</label><code class="big-code">${esc(result.code)}</code></div><p class="subtle">${lang==='zh'?'请现在保存这串密码。数据库里只保存哈希，不保存明文。':'Save this code now. Only its hash is stored in the database.'}</p><div class="modal-actions"><button class="primary" onclick="closeModal()">OK</button></div></div>`;
+  } catch (e) { alert(e.message); }
+}
+
+async function disableParentAccess(slug) {
+  if (!confirm(lang==='zh'?'确定关闭这个家长链接吗？':'Disable this parent link?')) return;
+  try { await window.studioAction('disable_parent_access',{student_slug:slug}); render(); } catch(e){ alert(e.message); }
+}
+
+function parentPage() {
+  return `<div class="page-intro"><div><div class="eyebrow cyan">PRIVATE FAMILY VIEW</div><h2>${t('parent')}</h2><p>${t('parentIntro')}</p></div></div>
+  <div class="grid grid-2">${(D.students||[]).map(s=>{const portal=(D.parentPortals||[]).find(p=>p.student_id===s.dbId);const live=portal?.is_active;return `<article class="parent-card glass"><div class="parent-preview"><div class="parent-stars"></div>${digitalAvatar(s,true)}<div><small>PRIVATE LEARNING JOURNEY</small><h3>${esc(s.name)}</h3><p>${esc(tx(s.project))}</p></div></div><div class="row between"><span class="chip ${live?'cyan':''}">${live?t('portalActive'):t('portalInactive')}</span><div class="row">${live?`<a class="mini-btn" href="/parent/${encodeURIComponent(s.id)}" target="_blank">Preview ↗</a><button class="mini-btn" onclick="disableParentAccess('${esc(s.id)}')">${t('disableAccess')}</button>`:`<button class="primary small" onclick="generateParentAccess('${esc(s.id)}')">${t('generateAccess')}</button>`}</div></div></article>`}).join('')}</div>
+  <div class="notice-card"><b>${lang==='zh'?'先把课程映射补准，再正式发给家长':'Finish exact lesson mapping before sharing widely'}</b><p>${t('mappingPending')}</p></div>`;
+}
+
+function render() {
+  const content = document.getElementById('content');
+  const pages = { command:commandPage, students:studentsPage, sessions:sessionsPage, inbox:inboxPage, content:contentPage, brain:brainPage, workflows:workflowsPage, parent:parentPage };
+  content.innerHTML = (pages[current] || commandPage)();
+}
+
+function askStudio() { go('workflows'); }
+
+window.go=go;window.render=render;window.setLanguage=setLanguage;window.closeModal=closeModal;window.generateParentAccess=generateParentAccess;window.disableParentAccess=disableParentAccess;window.askStudio=askStudio;
 refreshChrome();renderNav();render();
