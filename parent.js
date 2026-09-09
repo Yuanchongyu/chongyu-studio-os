@@ -1,192 +1,28 @@
-const app = document.getElementById('parentApp');
-
-const slug = (() => {
-  const parts = location.pathname.split('/').filter(Boolean);
-  return parts[0] === 'parent' && parts[1]
-    ? decodeURIComponent(parts[1]).toLowerCase()
-    : (new URLSearchParams(location.search).get('student') || '');
-})();
-
-let portalLang = localStorage.getItem('parent_lang') || 'zh';
-
-const esc = v => String(v ?? '')
-  .replaceAll('&', '&amp;')
-  .replaceAll('<', '&lt;')
-  .replaceAll('>', '&gt;')
-  .replaceAll('"', '&quot;')
-  .replaceAll("'", '&#039;');
-
-const T = {
-  zh: {
-    private:'私人学习成长档案', enter:'请输入家长访问密码查看课程记录、项目成长和作品证据。', closed:'这个家长页面还没有正式开启。请联系 Chongyu 老师。',
-    journey:'课程成长时间线', journeySub:'每一节课都对应真实项目与课堂证据', signals:'能力成长', signalsSub:'基于真实项目证据，而不是考试分数',
-    evidence:'作品与影像', evidenceSub:'图片 · 视频 · Demo · 项目链接', summary:'五节课里的成长变化', next:'下一阶段', logout:'退出',
-    course:'课程里程碑', growth:'成长信号', artifacts:'作品 / 影像证据',
-    summaryText:'五节课里，Marcos 已经从“告诉 AI 我想做什么”，逐渐走到了“发现问题、拆解问题、设计系统、部署作品、连接硬件，并开始用 AI 打造自己的数字身份与个人作品展示”。',
-    nextItems:['完成并部署个人网站','继续完善 GitHub 项目结构','连接 API 与外部服务','继续探索 AI + 传感器 / 硬件','把技术成果整理成可持续展示的个人作品集'],
-    access:'进入成长档案', age:'14 岁', builder:'项目式 AI Builder', teacher:'老师观察'
-  },
-  en: {
-    private:'Private Learning Journey', enter:'Enter the parent access code to view course records, project growth and evidence.', closed:'This parent portal is not active yet. Please contact Chongyu.',
-    journey:'Learning Journey', journeySub:'Every session is tied to real project evidence', signals:'Growth Signals', signalsSub:'Based on observed project evidence, not test scores',
-    evidence:'Project Evidence', evidenceSub:'Images · Video · Demo · Project Links', summary:'Growth across five sessions', next:'What’s Next', logout:'Log out',
-    course:'Course milestones', growth:'Growth signals', artifacts:'Projects / evidence',
-    summaryText:'Across five sessions, Marcos has moved from telling AI what he wants toward identifying problems, designing systems, deploying work, connecting software to hardware, and now using AI to build his own digital identity and personal portfolio.',
-    nextItems:['Finish and deploy the personal website','Organize the GitHub project structure','Connect APIs and external services','Continue exploring AI + sensors / hardware','Turn technical work into a sustainable personal portfolio'],
-    access:'Enter journey', age:'Age 14', builder:'Project-Based AI Builder', teacher:'Teacher observation'
-  }
-};
-
-const COPY = {
-  zh: {
-    1:['从兴趣开始创造：Minecraft + AI Agent','Marcos 从零编程基础出发，以自己最喜欢的 Minecraft 为起点，在 AI Agent 协作下完成网页版 Minecraft 项目。项目跑起来后，他主动发现移动按键错配、饥饿条缺失和掉落伤害缺失，并通过与 AI 对话一步步修复。',['完成可玩的网页版 Minecraft 项目','主动发现并修复移动按键问题','发现关键机制缺失','开始学会判断 AI 产出是否符合预期'],'这一节最重要的不是写了多少代码，而是 Marcos 开始形成“发现问题 → 描述问题 → 与 AI 协作修复”的习惯。'],
-    2:['第一次把作品真正上线：云端部署','Marcos 把 Minecraft 项目从本地电脑带到了公网。他理解服务器概念、创建 Vultr 云主机、通过 SSH 连接服务器、部署项目，并学习端口与防火墙规则，最终拿到可以分享给朋友的公网链接。',['理解服务器为什么能让作品被别人访问','创建并使用云主机','通过 SSH 远程连接服务器','配置端口与防火墙并完成部署'],'这一节真正的里程碑，是 Marcos 走通了“开发 → 部署 → 对外访问”的完整链路。'],
-    3:['开始设计一个真正的 AI 系统','这一节从训练、推理、数据集、输入与输出这些 AI 基础概念出发，再进入真实系统设计。Marcos 学会把人脸识别门禁拆成摄像头输入、AI 身份判断、权限确认和最终开门或拒绝，并开始理解“模型只是完整产品中的一个环节”。',['理解训练与推理的区别','理解数据集、输入与输出','拆解完整的人脸识别门禁系统','开始从“用 AI”走向“设计 AI 产品”'],'这一节开始出现明显的系统思维：不只关心模型能不能识别人脸，而是思考完整产品还需要什么。'],
-    4:['让软件第一次影响现实世界','Marcos 把上一节的人脸识别门禁继续延伸到硬件。他第一次接触面包板、电压、电流、电阻、LED 和蜂鸣器，并最终打通摄像头 → 人脸识别 → 权限判断 → Python 逻辑 → 硬件信号 → LED / 蜂鸣器的完整链路。',['第一次从软件进入真实硬件','理解电压、电流、电阻的最少必要知识','完成 LED 与蜂鸣器连接','完成一次真实的硬件调试'],'当自己写的软件第一次让真实世界产生反应时，Marcos 的兴奋非常明显。'],
-    5:['用 AI 打造自己的数字形象与个人网站','这一节课，我们把重点从“做功能”转向“创造自己的数字身份”。孩子们先完成 GitHub 账号设置，再用 ChatGPT 生成属于自己的个人数字形象，用 Kling 基于数字形象生成短视频，最后把这些内容放进自己的个人网页里。网页目前还没有正式部署，但第一版个人作品展示已经形成。',['完成 GitHub 账号设置','用 ChatGPT 生成个人数字形象','用 Kling 将数字形象生成视频','开始搭建带有自己数字形象视频的个人网页','掌握“先说模糊想法，再让 AI 帮忙生成精准提示词”的技巧'],'这一节最有价值的是 Marcos 开始把 AI 当成“表达自己”的工具，而不只是写代码的工具。他也学会了一个很实用的元能力：当自己不知道怎么问时，先把意图告诉 AI，让 AI 帮自己把问题问得更好。']
-  },
-  en: {
-    1:['Creating from Interest: Minecraft + AI Agent','Marcos started with no programming background and built a browser-based Minecraft project with an AI Agent, then independently found and fixed missing behaviors.',['Built a playable Minecraft-style project','Found product gaps independently','Iterated with AI'],'The key outcome was learning to notice problems, describe them, and iterate with AI.'],
-    2:['Publishing a Project to the Cloud','Marcos moved his project from local use to the public web using a VPS, SSH, ports and firewall configuration.',['Understood why servers make projects accessible','Used a VPS and SSH','Completed deployment','Shared a public link'],'He completed the full development → deployment → public-access chain.'],
-    3:['Designing a Real AI System','Marcos learned Training, Inference, Dataset, Input and Output, then decomposed a face-recognition access-control product into a complete system.',['Understood Training vs Inference','Understood Dataset / Input / Output','Designed an end-to-end AI system'],'This was a clear shift from using AI to designing systems.'],
-    4:['Making Software Affect the Physical World','Marcos connected face recognition to LEDs and a buzzer, learning the minimum necessary electronics and debugging a real hardware system.',['Moved from software into hardware','Learned core electronics concepts','Completed AI-to-hardware integration'],'Making software create a physical response made the learning tangible.'],
-    5:['Building a Personal Digital Identity with AI','The students set up GitHub, created personal digital avatars with ChatGPT, generated avatar-based videos with Kling, and started personal websites featuring their own AI-generated media.',['Set up GitHub','Created a personal digital avatar','Generated video with Kling','Started a personal website','Learned AI-assisted prompt refinement'],'Marcos began using AI as a tool for self-expression and learned that AI can help improve not only answers, but also the questions and prompts themselves.']
-  }
-};
-
-const t = key => T[portalLang][key] || T.zh[key] || key;
-
-async function api(method='GET', body=null) {
-  const opts = { method, credentials:'same-origin', headers:{'Content-Type':'application/json'} };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(`/api/parent-portal?student=${encodeURIComponent(slug)}`, opts);
-  return { r, data: await r.json().catch(() => ({})) };
-}
-
-function setPortalLang(next) {
-  portalLang = next;
-  localStorage.setItem('parent_lang', next);
-  load();
-}
-
-function topbar() {
-  return `<div class="topline"><div class="brand">Chongyu <span>Studio</span></div><div class="top-actions"><button class="lang-btn ${portalLang==='zh'?'active':''}" onclick="setPortalLang('zh')">中文</button><button class="lang-btn ${portalLang==='en'?'active':''}" onclick="setPortalLang('en')">EN</button><button class="logout" onclick="logout()">${t('logout')}</button></div></div>`;
-}
-
-function lockView(data) {
-  const active = data.portal_active;
-  app.innerHTML = `${topbar()}<section class="lock-card glass"><div class="eyebrow">${t('private')}</div><h1>${esc(data.student?.name || 'Student')}</h1><p>${active?t('enter'):t('closed')}</p>${active?`<input id="accessCode" type="password" placeholder="${portalLang==='zh'?'访问密码':'Access code'}"><button onclick="unlock()">${t('access')}</button>`:''}</section>`;
-}
-
-function signalLabel(score) {
-  const n = Number(score || 0);
-  if (n >= 9) return portalLang === 'zh' ? '表现突出' : 'Exceptional';
-  if (n >= 8) return portalLang === 'zh' ? '表现强' : 'Strong';
-  if (n >= 7) return portalLang === 'zh' ? '持续成长' : 'Growing';
-  if (n >= 5) return portalLang === 'zh' ? '发展中' : 'Developing';
-  return portalLang === 'zh' ? '开始形成' : 'Emerging';
-}
-
-function skillName(k) { return k.translations?.[portalLang]?.skill_name || k.skill_name; }
-function artifactSession(a) { return Number(a?.metadata?.session_number || 0) || 0; }
-function isVideo(a) { return a?.artifact_type === 'video' || a?.metadata?.mime_type === 'video/mp4' || /\.mp4(?:\?|$)/i.test(a?.signed_url || ''); }
-
-function portrait(artifacts, name) {
-  const p = artifacts.find(x => x.artifact_type === 'portrait' && x.signed_url);
-  return p
-    ? `<div class="avatar-photo"><img src="${esc(p.signed_url)}" alt="${esc(name)}"></div>`
-    : `<div class="avatar"><span>${esc((name || '?').slice(0,2).toUpperCase())}</span></div>`;
-}
-
-function mediaFor(artifacts, n) {
-  return artifacts.filter(x => artifactSession(x) === Number(n) && x.signed_url && x.artifact_type !== 'portrait').slice(0,3);
-}
-
-function mediaElement(a, compact=false) {
-  const title = esc(a.title || 'media');
-  if (isVideo(a)) {
-    return `<video class="${compact?'evidence-video':'session-video'}" src="${esc(a.signed_url)}" controls playsinline preload="metadata" aria-label="${title}"></video>`;
-  }
-  return `<img src="${esc(a.signed_url)}" alt="${title}">`;
-}
-
-function artifactTitle(a) {
-  if (portalLang === 'zh') {
-    if (isVideo(a) && artifactSession(a) === 5) return '第 5 节 · AI 数字形象视频';
-    if (artifactSession(a)) return `第 ${artifactSession(a)} 节课程素材`;
-    return 'Marcos 个人形象';
-  }
-  return a.title || (artifactSession(a) ? `Session ${artifactSession(a)} evidence` : a.artifact_type);
-}
-
-function portfolio(d) {
-  const s = d.student;
-  const sessions = d.sessions || [];
-  const skills = d.skills || [];
-  const artifacts = d.artifacts || [];
-
-  app.innerHTML = `${topbar()}
-    <section class="hero glass">
-      <div><div class="eyebrow">${t('private')}</div><h1>${esc(s.name)}</h1><p>${portalLang==='zh'?'用 AI 和编程，把想法变成真正能运行、能展示的作品。':'Using AI and coding to turn ideas into real working and shareable products.'}</p><div class="meta"><span class="chip">${t('age')}</span><span class="chip">${t('builder')}</span></div></div>
-      ${portrait(artifacts,s.name)}
-    </section>
-
-    <div class="grid">
-      <div class="metric glass"><b>${sessions.length}</b><span>${t('course')}</span></div>
-      <div class="metric glass"><b>${skills.length}</b><span>${t('growth')}</span></div>
-      <div class="metric glass"><b>${artifacts.length}</b><span>${t('artifacts')}</span></div>
-    </div>
-
-    <div class="journey-summary"><strong>${t('summary')}</strong><p>${t('summaryText')}</p></div>
-
-    <section class="section">
-      <div class="section-title"><div><div class="eyebrow">${portalLang==='zh'?'学习历程':'JOURNEY'}</div><h2>${t('journey')}</h2></div><small>${t('journeySub')}</small></div>
-      <div class="timeline">
-        ${sessions.map(x => {
-          const c = COPY[portalLang][x.session_number] || [x.title,x.summary,x.highlights||[],x.teacher_reflection||''];
-          const media = mediaFor(artifacts,x.session_number);
-          return `<article class="session glass"><div class="session-num">${portalLang==='zh'?`第${x.session_number}节`:`S${x.session_number}`}</div><div>${media.length?`<div class="session-media">${media.map(a=>mediaElement(a,false)).join('')}</div>`:''}<h3>${esc(c[0])}</h3><p>${esc(c[1])}</p><div class="highlights">${(c[2]||[]).slice(0,5).map(h=>`<div><span>✓</span>${esc(h)}</div>`).join('')}</div><p style="margin-top:12px"><b>${t('teacher')}：</b>${esc(c[3])}</p></div></article>`;
-        }).join('')}
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-title"><div><div class="eyebrow">${portalLang==='zh'?'成长信号':'GROWTH SIGNALS'}</div><h2>${t('signals')}</h2></div><small>${t('signalsSub')}</small></div>
-      <div class="skill-grid">${skills.map(k=>`<div class="skill glass"><div class="skill-head"><span>${esc(skillName(k))}</span><strong>${signalLabel(k.score)}</strong></div><div class="bar"><i style="width:${Math.min(100,Number(k.score||0)*10)}%"></i></div></div>`).join('')}</div>
-    </section>
-
-    <section class="section">
-      <div class="section-title"><div><div class="eyebrow">${portalLang==='zh'?'项目证据':'EVIDENCE'}</div><h2>${t('evidence')}</h2></div><small>${t('evidenceSub')}</small></div>
-      <div class="artifact-gallery">${artifacts.filter(a=>a.signed_url).map(a=>`<article class="artifact-tile glass">${mediaElement(a,true)}<div><strong>${esc(artifactTitle(a))}</strong><small>${artifactSession(a)?(portalLang==='zh'?`第 ${artifactSession(a)} 节`:`Session ${artifactSession(a)}`):a.artifact_type}</small></div></article>`).join('')}</div>
-    </section>
-
-    <section class="section">
-      <div class="section-title"><div><div class="eyebrow">${portalLang==='zh'?'下一步':'NEXT'}</div><h2>${t('next')}</h2></div></div>
-      <div class="next-card glass"><ul>${t('nextItems').map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
-    </section>`;
-}
-
-async function unlock() {
-  const code = document.getElementById('accessCode')?.value || '';
-  const {r,data} = await api('POST',{student:slug,code});
-  if (!r.ok) { alert(data.error || (portalLang==='zh'?'访问密码不正确':'Invalid access code')); return; }
-  load();
-}
-
-async function logout() {
-  await api('DELETE',{student:slug});
-  location.reload();
-}
-
-async function load() {
-  if (!slug) { app.innerHTML='<section class="loading-card">Missing student link.</section>'; return; }
-  const {r,data} = await api();
-  if (r.status === 401) { lockView(data); return; }
-  if (!r.ok) { app.innerHTML=`<section class="loading-card">${esc(data.error || 'Unable to load portal.')}</section>`; return; }
-  portfolio(data);
-}
-
-window.setPortalLang = setPortalLang;
-window.unlock = unlock;
-window.logout = logout;
-load();
+const app=document.getElementById('parentApp');
+const slug=(()=>{const p=location.pathname.split('/').filter(Boolean);return p[0]==='parent'&&p[1]?decodeURIComponent(p[1]).toLowerCase():(new URLSearchParams(location.search).get('student')||'')})();
+let portalLang=localStorage.getItem('parent_lang')||'zh';
+const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+const T={zh:{private:'私人学习成长档案',enter:'请输入家长访问密码查看课程记录、项目成长和作品证据。',closed:'这个家长页面还没有正式开启。请联系 Chongyu 老师。',journey:'课程成长时间线',journeySub:'每一节课都对应真实项目与课堂证据',signals:'能力成长',signalsSub:'基于真实项目证据，而不是考试分数',evidence:'作品与影像',evidenceSub:'图片 · 视频 · Demo · 项目链接',next:'下一阶段',logout:'退出',course:'课程里程碑',growth:'成长信号',artifacts:'作品 / 影像证据',access:'进入成长档案',teacher:'老师观察',observed:'已观察',builder:'项目式 AI Builder'},en:{private:'Private Learning Journey',enter:'Enter the parent access code to view course records, project growth and evidence.',closed:'This parent portal is not active yet. Please contact Chongyu.',journey:'Learning Journey',journeySub:'Every session is tied to real project evidence',signals:'Growth Signals',signalsSub:'Based on observed project evidence, not test scores',evidence:'Project Evidence',evidenceSub:'Images · Video · Demo · Project Links',next:'What’s Next',logout:'Log out',course:'Course milestones',growth:'Growth signals',artifacts:'Projects / evidence',access:'Enter journey',teacher:'Teacher observation',observed:'Observed',builder:'Project-Based AI Builder'}};
+const t=k=>T[portalLang][k]||T.zh[k]||k;
+async function api(method='GET',body=null){const o={method,credentials:'same-origin',headers:{'Content-Type':'application/json'}};if(body)o.body=JSON.stringify(body);const r=await fetch(`/api/parent-portal?student=${encodeURIComponent(slug)}`,o);return{r,data:await r.json().catch(()=>({}))}}
+function setPortalLang(n){portalLang=n;localStorage.setItem('parent_lang',n);load()}
+function topbar(){return`<div class="topline"><div class="brand">Chongyu <span>Studio</span></div><div class="top-actions"><button class="lang-btn ${portalLang==='zh'?'active':''}" onclick="setPortalLang('zh')">中文</button><button class="lang-btn ${portalLang==='en'?'active':''}" onclick="setPortalLang('en')">EN</button><button class="logout" onclick="logout()">${t('logout')}</button></div></div>`}
+function lockView(d){const active=d.portal_active;app.innerHTML=`${topbar()}<section class="lock-card glass"><div class="eyebrow">${t('private')}</div><h1>${esc(d.student?.name||'Student')}</h1><p>${active?t('enter'):t('closed')}</p>${active?`<input id="accessCode" type="password" placeholder="${portalLang==='zh'?'访问密码':'Access code'}"><button onclick="unlock()">${t('access')}</button>`:''}</section>`}
+const skillName=k=>k.translations?.[portalLang]?.skill_name||k.skill_name;
+const artifactSession=a=>Number(a?.metadata?.session_number||0)||0;
+const isVideo=a=>a?.artifact_type==='video'||a?.metadata?.mime_type==='video/mp4'||/\.mp4(?:\?|$)/i.test(a?.signed_url||'');
+function portrait(arts,name){const p=arts.find(x=>x.artifact_type==='portrait'&&x.signed_url);return p?`<div class="avatar-photo"><img src="${esc(p.signed_url)}" alt="${esc(name)}"></div>`:`<div class="avatar"><span>${esc((name||'?').slice(0,2).toUpperCase())}</span></div>`}
+function mediaFor(arts,n){return arts.filter(x=>artifactSession(x)===Number(n)&&x.signed_url&&x.artifact_type!=='portrait').slice(0,3)}
+function mediaElement(a,compact=false){const title=esc(a.title||'media');return isVideo(a)?`<video class="${compact?'evidence-video':'session-video'}" src="${esc(a.signed_url)}" controls playsinline preload="metadata" aria-label="${title}"></video>`:`<img src="${esc(a.signed_url)}" alt="${title}">`}
+function artifactTitle(a,name){if(portalLang==='zh'){if(isVideo(a)&&artifactSession(a)===5)return'第 5 节 · AI 数字形象视频';if(artifactSession(a))return`第 ${artifactSession(a)} 节课程素材`;return`${name} 个人形象`}return a.title||(artifactSession(a)?`Session ${artifactSession(a)} evidence`:a.artifact_type)}
+function translatedStudent(s,field){return s.translations?.[portalLang]?.[field]||s[field]||''}
+function translatedSession(x,field){return x.translations?.[portalLang]?.[field]??x[field]??(Array.isArray(x[field])?[]:'')}
+function translatedRecord(r,field){return r?.translations?.[portalLang]?.[field]??r?.[field]??''}
+function journeySummary(s,sessions){const n=sessions.length;if(portalLang==='zh'){if(s.slug==='mason')return`${n} 节课里，Mason 已经从 AI 协作与项目创建，逐步走到系统设计、软硬件结合、数字身份，并在最新课程里开始用 AI 批量产生、筛选和并行孵化 IMU 创意原型。`;if(s.slug==='marcos')return`${n} 节课里，Marcos 已经从 AI 协作与项目创建，逐步走到部署、系统设计、软硬件结合、数字身份，并在最新课程里把 IMU 直接变成了可玩的体感游戏控制器。`;return`${s.name} 已完成 ${n} 节项目式 AI 课程，成长记录会随着真实课堂持续更新。`}if(s.slug==='mason')return`Across ${n} sessions, Mason has moved from AI-assisted creation toward systems thinking, hardware integration, digital identity, and now batch-generating and incubating multiple IMU prototypes in parallel.`;if(s.slug==='marcos')return`Across ${n} sessions, Marcos has progressed from AI-assisted creation to deployment, systems design, hardware integration, digital identity, and now using an IMU as a real game controller.`;return`${s.name} has completed ${n} project-based AI sessions, with the journey updated from real classroom evidence.`}
+function nextItems(s){if(s.slug==='mason')return portalLang==='zh'?['从 5 个 IMU 原型中挑 1–2 个重点方向','解决 IMU 连接与校准问题','把最强 Idea 做成稳定可玩的 Demo','继续练习批量 Idea → Prompt → 原型的工作流']:['Choose 1–2 of the five IMU prototypes','Resolve IMU connection and calibration','Turn the strongest idea into a stable playable demo','Keep refining the idea → prompt → prototype workflow'];if(s.slug==='marcos')return portalLang==='zh'?['继续优化 IMU 战机游戏控制','加入校准、死区和更平滑的运动映射','把体感原型做成更完整的可展示项目','继续整理 GitHub 与个人作品集']:['Improve IMU game control','Add calibration, dead zones and smoother motion mapping','Turn the prototype into a more complete showcase project','Keep organizing GitHub and the personal portfolio'];return portalLang==='zh'?['继续下一阶段项目','补充真实作品证据','记录新的成长信号']:['Continue the next project phase','Add real project evidence','Capture new growth signals']}
+function signalLabel(k){if(k.score==null)return t('observed');const n=Number(k.score||0);if(n>=9)return portalLang==='zh'?'表现突出':'Exceptional';if(n>=8)return portalLang==='zh'?'表现强':'Strong';if(n>=7)return portalLang==='zh'?'持续成长':'Growing';if(n>=5)return portalLang==='zh'?'发展中':'Developing';return portalLang==='zh'?'开始形成':'Emerging'}
+function portfolio(d){const s=d.student,sessions=d.sessions||[],skills=d.skills||[],arts=d.artifacts||[],records=d.records||[];const recordMap=new Map(records.map(r=>[r.session_id,r]));const age=s.age?(portalLang==='zh'?`${s.age} 岁`:`Age ${s.age}`):(portalLang==='zh'?'年龄未填写':'Age not set');const builder=translatedStudent(s,'current_level')||t('builder');app.innerHTML=`${topbar()}<section class="hero glass"><div><div class="eyebrow">${t('private')}</div><h1>${esc(s.name)}</h1><p>${portalLang==='zh'?'用 AI 和编程，把想法变成真正能运行、能展示的作品。':'Using AI and coding to turn ideas into real working and shareable products.'}</p><div class="meta"><span class="chip">${esc(age)}</span><span class="chip">${esc(builder)}</span></div>${translatedStudent(s,'current_project')?`<p style="margin-top:12px"><b>${portalLang==='zh'?'当前方向':'Current focus'}：</b>${esc(translatedStudent(s,'current_project'))}</p>`:''}</div>${portrait(arts,s.name)}</section><div class="grid"><div class="metric glass"><b>${sessions.length}</b><span>${t('course')}</span></div><div class="metric glass"><b>${skills.length}</b><span>${t('growth')}</span></div><div class="metric glass"><b>${arts.length}</b><span>${t('artifacts')}</span></div></div><div class="journey-summary"><strong>${portalLang==='zh'?`${sessions.length} 节课里的成长变化`:`Growth across ${sessions.length} sessions`}</strong><p>${esc(journeySummary(s,sessions))}</p></div><section class="section"><div class="section-title"><div><div class="eyebrow">${portalLang==='zh'?'学习历程':'JOURNEY'}</div><h2>${t('journey')}</h2></div><small>${t('journeySub')}</small></div><div class="timeline">${sessions.map(x=>{const r=recordMap.get(x.id);const title=translatedSession(x,'title'),summary=translatedSession(x,'summary'),highlights=translatedSession(x,'highlights')||[],reflection=translatedRecord(r,'teacher_note')||translatedSession(x,'teacher_reflection');const media=mediaFor(arts,x.session_number);return`<article class="session glass"><div class="session-num">${portalLang==='zh'?`第${x.session_number}节`:`S${x.session_number}`}</div><div>${media.length?`<div class="session-media">${media.map(a=>mediaElement(a,false)).join('')}</div>`:''}<h3>${esc(title)}</h3><p>${esc(summary)}</p><div class="highlights">${(highlights||[]).slice(0,6).map(h=>`<div><span>✓</span>${esc(h)}</div>`).join('')}</div>${reflection?`<p style="margin-top:12px"><b>${t('teacher')}：</b>${esc(reflection)}</p>`:''}</div></article>`}).join('')}</div></section><section class="section"><div class="section-title"><div><div class="eyebrow">${portalLang==='zh'?'成长信号':'GROWTH SIGNALS'}</div><h2>${t('signals')}</h2></div><small>${t('signalsSub')}</small></div><div class="skill-grid">${skills.length?skills.map(k=>`<div class="skill glass"><div class="skill-head"><span>${esc(skillName(k))}</span><strong>${signalLabel(k)}</strong></div>${k.score!=null?`<div class="bar"><i style="width:${Math.min(100,Number(k.score||0)*10)}%"></i></div>`:''}${k.evidence?`<small>${esc(k.translations?.[portalLang]?.evidence||k.evidence)}</small>`:''}</div>`).join(''):`<div class="glass" style="padding:18px">${portalLang==='zh'?'成长信号会随真实课堂证据持续补充。':'Growth signals will be added from real classroom evidence.'}</div>`}</div></section><section class="section"><div class="section-title"><div><div class="eyebrow">${portalLang==='zh'?'项目证据':'EVIDENCE'}</div><h2>${t('evidence')}</h2></div><small>${t('evidenceSub')}</small></div><div class="artifact-gallery">${arts.filter(a=>a.signed_url).map(a=>`<article class="artifact-tile glass">${mediaElement(a,true)}<div><strong>${esc(artifactTitle(a,s.name))}</strong><small>${artifactSession(a)?(portalLang==='zh'?`第 ${artifactSession(a)} 节`:`Session ${artifactSession(a)}`):a.artifact_type}</small></div></article>`).join('')}</div></section><section class="section"><div class="section-title"><div><div class="eyebrow">${portalLang==='zh'?'下一步':'NEXT'}</div><h2>${t('next')}</h2></div></div><div class="next-card glass"><ul>${nextItems(s).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></section>`}
+async function unlock(){const code=document.getElementById('accessCode')?.value||'';const{r,data}=await api('POST',{student:slug,code});if(!r.ok){alert(data.error||(portalLang==='zh'?'访问密码不正确':'Invalid access code'));return}load()}
+async function logout(){await api('DELETE',{student:slug});location.reload()}
+async function load(){if(!slug){app.innerHTML='<section class="loading-card">Missing student link.</section>';return}const{r,data}=await api();if(r.status===401){lockView(data);return}if(!r.ok){app.innerHTML=`<section class="loading-card">${esc(data.error||'Unable to load portal.')}</section>`;return}portfolio(data)}
+window.setPortalLang=setPortalLang;window.unlock=unlock;window.logout=logout;load();
