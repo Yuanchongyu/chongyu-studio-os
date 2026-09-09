@@ -1,1 +1,1 @@
-.digital-avatar{overflow:hidden}.student-avatar-photo{width:100%;height:100%;display:block;object-fit:cover;border-radius:inherit}
+.digital-avatar{overflow:hidden}.digital-avatar.has-photo{background:#eef6ff;border-color:rgba(79,132,255,.18);box-shadow:0 8px 22px rgba(66,117,185,.14)}.student-avatar-photo{width:100%;height:100%;display:block;object-fit:cover;border-radius:inherit}.parent-avatar-host{position:relative!important;overflow:hidden!important}.parent-avatar-photo{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;border-radius:inherit}
