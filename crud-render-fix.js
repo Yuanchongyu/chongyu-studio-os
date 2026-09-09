@@ -1,0 +1,1 @@
+(()=>{const base=render;render=function(){if(['students','prep','content'].includes(current)&&typeof window.go==='function'){window.go(current);return}base()};window.render=render;})();
