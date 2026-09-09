@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f5f8fc" />
   <title>Chongyu Studio OS</title>
   <link rel="stylesheet" href="styles.css?v=lighttech-20260908" />
+  <link rel="stylesheet" href="media-upload.css?v=20260908" />
 </head>
 <body>
   <div class="app-shell">
@@ -20,6 +21,7 @@
         <div class="top-actions">
           <div class="lang-switch" aria-label="Language switcher"><button id="langEn" onclick="setLanguage('en')">EN</button><button id="langZh" onclick="setLanguage('zh')">中文</button></div>
           <button class="ghost" id="modelBtn" disabled>ChatGPT · 主 AI 操作员</button>
+          <button class="ghost" id="uploadBtn" onclick="openMediaUploader()">↑ 上传素材</button>
           <button class="primary" id="captureBtn" onclick="openInboxComposer()">+ 记录</button>
         </div>
       </header>
@@ -30,5 +32,6 @@
   <script src="data/seed.js?v=20260908"></script>
   <script src="app.js?v=lighttech-20260908"></script>
   <script src="studio-live.js?v=lighttech-20260908"></script>
+  <script src="media-upload.js?v=20260908"></script>
 </body>
 </html>
