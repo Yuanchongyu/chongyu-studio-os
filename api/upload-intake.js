@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 const PROJECT_URL = 'https://lclkojyfyqhefwmkmgym.supabase.co';
+const STORAGE_URL = `${PROJECT_URL}/storage/v1`;
 const SESSION_COOKIE = 'studio_session';
 const MAX_IMAGE_BYTES = 3_500_000;
 const MAX_VIDEO_BYTES = 120 * 1024 * 1024;
@@ -25,17 +26,20 @@ function mediaPath(fileName,mimeType){
 async function insert(table,body){const r=await fetch(`${PROJECT_URL}/rest/v1/${table}`,{method:'POST',headers:apiHeaders({'Content-Type':'application/json',Prefer:'return=representation'}),body:JSON.stringify(body)});const t=await r.text();if(!r.ok)throw new Error(`${table}: ${r.status} ${t.slice(0,400)}`);return t?JSON.parse(t):[];}
 
 async function createSignedUpload(bucket,path){
-  const r=await fetch(`${PROJECT_URL}/storage/v1/object/upload/sign/${encodeStoragePath(bucket)}/${encodeStoragePath(path)}`,{
-    method:'POST',headers:apiHeaders({'Content-Type':'application/json'}),body:JSON.stringify({upsert:false})
+  const endpoint=`${STORAGE_URL}/object/upload/sign/${encodeStoragePath(bucket)}/${encodeStoragePath(path)}`;
+  const r=await fetch(endpoint,{
+    method:'POST',headers:apiHeaders({'Content-Type':'application/json'}),body:JSON.stringify({})
   });
   const t=await r.text();
   if(!r.ok) throw new Error(`signed upload: ${r.status} ${t.slice(0,500)}`);
   const d=t?JSON.parse(t):{};
-  const token=d.token||'';
-  let url=d.url||d.signedURL||d.signedUrl||'';
-  if(!url && token) url=`/storage/v1/object/upload/sign/${encodeStoragePath(bucket)}/${encodeStoragePath(path)}?token=${encodeURIComponent(token)}`;
-  if(url && !url.startsWith('http')) url=`${PROJECT_URL}${url.startsWith('/')?'':'/'}${url}`;
-  if(!url) throw new Error('Supabase did not return a signed upload URL.');
+  let token=d.token||'';
+  if(!token){
+    const returned=String(d.url||d.signedURL||d.signedUrl||'');
+    if(returned){try{token=new URL(returned,STORAGE_URL).searchParams.get('token')||'';}catch(_){}}
+  }
+  if(!token) throw new Error('Supabase did not return a signed upload token.');
+  const url=`${endpoint}?token=${encodeURIComponent(token)}`;
   return {url,token};
 }
 
@@ -74,7 +78,7 @@ export default async function handler(req,res){
     if(!buffer.length||buffer.length>MAX_IMAGE_BYTES) return res.status(413).json({error:'Image is too large after compression. Keep it under 3.5 MB.'});
 
     const {bucket,path}=mediaPath(file_name,mime_type);
-    const upload=await fetch(`${PROJECT_URL}/storage/v1/object/${encodeStoragePath(bucket)}/${encodeStoragePath(path)}`,{
+    const upload=await fetch(`${STORAGE_URL}/object/${encodeStoragePath(bucket)}/${encodeStoragePath(path)}`,{
       method:'POST',headers:apiHeaders({'Content-Type':mime_type,'x-upsert':'false'}),body:buffer
     });
     const uploadText=await upload.text();
