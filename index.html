@@ -1,46 +1,34 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#07111f" />
   <title>Chongyu Studio OS</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="manager.css" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">C</div><div><strong>Chongyu Studio</strong><span id="brandSub">AI Education OS</span></div></div>
       <nav id="nav"></nav>
-      <div class="sidebar-bottom">
-        <div class="status-dot"></div><span id="memoryStatus">Company memory online</span>
-      </div>
+      <div class="sidebar-bottom"><span id="memoryStatus">🔒 点击连接公司记忆</span></div>
     </aside>
     <main>
       <header class="topbar">
-        <div><div class="eyebrow" id="workspaceLabel">Founder workspace</div><h1 id="pageTitle">Command Center</h1></div>
+        <div><div class="eyebrow" id="workspaceLabel">创始人控制台</div><h1 id="pageTitle">指挥中心</h1></div>
         <div class="top-actions">
-          <div class="lang-switch" aria-label="Language switcher">
-            <button id="langEn" onclick="setLanguage('en')">EN</button>
-            <button id="langZh" onclick="setLanguage('zh')">中文</button>
-          </div>
-          <button class="ghost" id="modelBtn">Auto · GPT/Claude</button>
-          <button class="primary" id="captureBtn" onclick="openInboxComposer()">+ Capture</button>
+          <div class="lang-switch" aria-label="Language switcher"><button id="langEn" onclick="setLanguage('en')">EN</button><button id="langZh" onclick="setLanguage('zh')">中文</button></div>
+          <button class="ghost" id="modelBtn" disabled>ChatGPT · 主 AI 操作员</button>
+          <button class="primary" id="captureBtn" onclick="openInboxComposer()">+ 记录</button>
         </div>
       </header>
       <section id="content" class="content"></section>
-      <div class="ai-bar">
-        <div class="spark">✦</div>
-        <input id="aiInput" placeholder="Ask Studio… e.g. ‘What should Kevin learn next?’" />
-        <select id="modelSelect"><option>Auto</option><option>GPT</option><option>Claude</option></select>
-        <button id="runBtn" onclick="askStudio()">Run</button>
-      </div>
     </main>
   </div>
   <div id="modal" class="modal hidden"></div>
   <script src="data/seed.js"></script>
   <script src="app.js"></script>
-  <script src="manager-workspace.js"></script>
   <script src="studio-live.js"></script>
 </body>
 </html>
