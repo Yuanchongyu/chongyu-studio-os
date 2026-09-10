@@ -127,5 +127,5 @@
   window.refreshPrepDashboard=renderPrepDashboard;
 
   const obs=new MutationObserver(()=>{if(onPrepPage()&&!document.querySelector('.prep-dashboard-v3'))setTimeout(renderPrepDashboard,20);});
-  window.addEventListener('load',()=>{const c=document.getElementById('content');if(c)obs.observe(c,{childList:true,subtree:false});setTimeout(renderPrepDashboard,450);setInterval(()=>{if(onPrepPage())renderPrepDashboard();},1600);});
+  window.addEventListener('load',()=>{const c=document.getElementById('content');if(c)obs.observe(c,{childList:true,subtree:false});setTimeout(renderPrepDashboard,450);});
 })();
