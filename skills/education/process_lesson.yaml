@@ -1,6 +1,6 @@
 name: process_lesson
 owner: Education Manager
-purpose: Turn a raw post-class note into durable student, lesson and company artifacts.
+purpose: Turn a raw post-class note into durable student, lesson, parent and content artifacts.
 required_context: [student_profile, recent_lessons, current_project, relevant_teaching_principles]
 steps:
   - extract factual lesson events
@@ -8,15 +8,31 @@ steps:
   - infer skill changes only when evidence exists
   - propose next lesson direction
   - identify parent-friendly growth signal
-  - identify content-worthy story
+  - hand off the lesson to Content Growth Manager for story mining
+  - score whether the lesson contains a publishable story using concrete evidence, tension, student agency and visible change
+  - when the story is strong enough, generate one concise Xiaohongshu draft instead of a standalone idea card
   - identify reusable teaching insight
 writeback:
   - lessons
   - student_skills
   - parent_updates:draft
-  - content_items:idea
+  - content_items:draft_when_publishable
   - company_brain:candidate
+content_handoff:
+  owner: Content Growth Manager
+  skill: mine_lesson_story
+  default_behavior: review every processed lesson automatically
+  output:
+    - story_angle
+    - hook
+    - draft_if_publishable
+    - source_lesson_id
+  rules:
+    - do not create filler content just to populate the content studio
+    - prefer one strong draft over several weak ideas
+    - preserve the source lesson and student evidence behind every claim
 rules:
   - never invent student outcomes
   - separate observation from inference
   - preserve source lesson id for every derived artifact
+  - student learning records remain individual even when multiple students share one class
