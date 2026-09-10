@@ -1,1 +1,154 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI基础 + 人脸识别门禁系统设计</title><style>body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;background:#eef7ff;color:#0b2144}.deck{height:100vh;overflow-y:auto;scroll-snap-type:y mandatory}.slide{min-height:100vh;box-sizing:border-box;padding:54px 64px;scroll-snap-align:start;background:linear-gradient(135deg,#f7fcff,#eef7ff);display:flex;flex-direction:column;gap:26px}.kicker{display:inline-flex;width:max-content;padding:10px 18px;border-radius:999px;background:#dff1ff;color:#1375d1;font-weight:800}.title{font-size:56px;line-height:1.05;margin:0;color:#07346f}.sub{font-size:25px;color:#5a7498;margin:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.card{background:rgba(255,255,255,.9);border:1px solid #cfe6fb;border-radius:30px;padding:26px;box-shadow:0 20px 50px rgba(40,116,190,.13)}h2{font-size:32px;margin:0 0 18px}.row{display:flex;gap:18px;align-items:center;margin:14px 0;font-size:25px}.num{width:48px;height:48px;border-radius:16px;background:#1387ee;color:white;display:grid;place-items:center;font-weight:900}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;align-items:center}.step{min-height:150px;display:grid;place-items:center;text-align:center;background:white;border:1px solid #cfe6fb;border-radius:24px;padding:18px;font-size:22px;font-weight:800}.arrow{font-size:36px;color:#1387ee}.callout{background:#e8fff5;border:1px solid #9be8c8;border-radius:24px;padding:22px;font-size:25px;color:#0a6b4e}.warn{background:#fff0f0;border-color:#ffc7c7;color:#9c1d2a}.foot{margin-top:auto;text-align:center;color:#4d7cb3;font-size:22px}</style></head><body><main class="deck"><section class="slide"><div class="kicker">第1节课 / 课堂导入</div><h1 class="title">AI基础 + 人脸识别门禁系统设计</h1><p class="sub">Ryan & Spencer · 9.10 首节课备课</p><div class="grid"><div class="card"><h2>这节课会学什么？</h2><div class="row"><span class="num">✓</span>Dataset、Training、Validation、Inference</div><div class="row"><span class="num">✓</span>Face Detection 和 Face Recognition 的区别</div><div class="row"><span class="num">✓</span>把一个 AI 模型放进真正产品系统</div><div class="row"><span class="num">✓</span>数据库、权限判断、报警和异常处理</div></div><div class="card"><h2>产品目标</h2><p class="sub">设计一个网页端人脸识别门禁系统：能识别人脸、查询家庭成员数据库，并用绿色/红色框给出反馈。</p><div class="callout">用真实产品思维理解 AI，而不是只背概念。</div></div></div><div class="foot">用 AI 创造更美好的生活</div></section><section class="slide"><div class="kicker">第1节课 / AI 基础</div><h1 class="title">AI 是怎么“学会识别”的？</h1><p class="sub">从 Dataset 到 Training、Validation、Inference</p><div class="flow"><div class="step">Dataset<br>猫 / 狗图片<br>带标签样本</div><div class="arrow">→</div><div class="step">Training<br>看样本<br>做练习<br>调整自己</div><div class="arrow">→</div><div class="step">Validation<br>阶段小测<br>检查是否学偏</div></div><div class="grid"><div class="card"><h2>Inference 推理</h2><p class="sub">真正上班：给模型一张从没见过的新图片，它判断“这是猫还是狗”。</p></div><div class="card"><h2>关键区别</h2><div class="callout">训练是学习过程，推理是应用学到的能力，验证是防止只背答案。</div></div></div></section><section class="slide"><div class="kicker">第1节课 / 系统拆解</div><h1 class="title">人脸识别门禁系统怎么设计？</h1><div class="flow"><div class="step">网页摄像头<br>采集实时画面</div><div class="arrow">→</div><div class="step">Face Detection<br>找到脸的位置<br>Bounding Box</div><div class="arrow">→</div><div class="step">Face Recognition<br>提取特征<br>判断是谁</div></div><div class="grid"><div class="card"><h2>查数据库</h2><p class="sub">Family Member 数据库存储家庭成员信息。识别到的人存在 → 允许通过；不存在 → 拒绝并报警。</p></div><div class="card"><h2>UI 反馈</h2><div class="callout">绿色框：家庭成员，允许开门。</div><br><div class="callout warn">红色框：未知人员，触发警报。</div></div></div></section><section class="slide"><div class="kicker">第1节课 / 课堂互动</div><h1 class="title">课堂讨论 + 动手任务</h1><div class="grid"><div class="card"><h2>讨论问题</h2><div class="row"><span class="num">1</span>怎么新增一个 Family Member？</div><div class="row"><span class="num">2</span>数据库里至少要存什么？</div><div class="row"><span class="num">3</span>什么时候应该拒绝开门？</div><div class="row"><span class="num">4</span>识别不准应该怎么办？</div></div><div class="card"><h2>工程细节提醒</h2><div class="row"><span class="num">✓</span>confidence threshold</div><div class="row"><span class="num">✓</span>Unknown + cooldown/debounce</div><div class="row"><span class="num">✓</span>多人同框 / 空数据库 / 摄像头失败</div><div class="row"><span class="num">✓</span>人脸数据尽量最小化保存</div></div></div><div class="callout">同样的主题，每个孩子都应该有自己的思路、问题和成长记录。</div></section></main></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ryan & Spencer · AI Face Access System</title>
+  <style>
+    :root{--bg:#eef7ff;--ink:#08264b;--muted:#5d789b;--blue:#137ee8;--cyan:#15b8d8;--green:#0a9f70;--red:#d9304f;--amber:#f59e0b;--card:#ffffffee;--line:#cfe6fb}
+    *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC',sans-serif;background:var(--bg);color:var(--ink)}
+    .deck{height:100vh;overflow-y:auto;scroll-snap-type:y mandatory}.slide{min-height:100vh;padding:50px 64px;scroll-snap-align:start;background:radial-gradient(circle at top right,#ffffff 0,#eef7ff 45%,#e8f4ff 100%);display:flex;flex-direction:column;gap:24px}
+    .kicker{display:inline-flex;width:max-content;padding:10px 18px;border-radius:999px;background:#dff1ff;color:#126dc4;font-weight:900;letter-spacing:.02em}.title{font-size:56px;line-height:1.04;margin:0;color:#07346f}.sub{font-size:25px;line-height:1.45;color:var(--muted);margin:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{background:var(--card);border:1px solid var(--line);border-radius:30px;padding:26px;box-shadow:0 20px 50px rgba(40,116,190,.12)}h2{font-size:32px;margin:0 0 16px}.row{display:flex;gap:16px;align-items:flex-start;margin:14px 0;font-size:24px;line-height:1.35}.num{flex:0 0 auto;width:46px;height:46px;border-radius:15px;background:var(--blue);color:white;display:grid;place-items:center;font-weight:900}.pill{display:inline-block;padding:8px 14px;border-radius:999px;background:#e8f6ff;color:#126dc4;font-weight:900;margin:4px}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;align-items:center}.step{min-height:138px;display:grid;place-items:center;text-align:center;background:white;border:1px solid var(--line);border-radius:24px;padding:18px;font-size:22px;font-weight:900;line-height:1.25}.arrow{font-size:34px;color:var(--blue);text-align:center}.callout{background:#e8fff5;border:1px solid #9be8c8;border-radius:24px;padding:22px;font-size:25px;line-height:1.38;color:#0a6b4e}.warn{background:#fff0f0;border-color:#ffc7c7;color:#9c1d2a}.amber{background:#fff7e6;border-color:#ffd992;color:#8a5200}.big{font-size:34px;font-weight:950}.code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#0b2144;color:#eaf6ff;border-radius:24px;padding:22px;font-size:22px;line-height:1.45;white-space:pre-wrap}.split{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:stretch}.foot{margin-top:auto;text-align:center;color:#4d7cb3;font-size:21px}.rolebar{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.role{padding:12px 16px;border-radius:18px;background:white;border:1px solid var(--line);font-weight:900}.role.active{background:#07346f;color:white}.badge{font-size:18px;color:var(--muted);font-weight:800}.mini{font-size:20px;color:var(--muted);line-height:1.45}.check{color:var(--green);font-weight:950}.x{color:var(--red);font-weight:950}@media(max-width:850px){.slide{padding:34px 24px}.title{font-size:40px}.grid,.grid3,.split,.flow{grid-template-columns:1fr}.arrow{display:none}}
+  </style>
+</head>
+<body>
+<main class="deck">
+  <section class="slide">
+    <div class="kicker">Ryan & Spencer · Face Access Lesson</div>
+    <h1 class="title">AI 基础 + 网页端人脸识别门禁系统</h1>
+    <p class="sub">从 AI 怎么学习开始，到孩子自己收集 Dataset，再和 AI Agent 一起完成一个可演示的网页端 AI 门禁系统。</p>
+    <div class="grid">
+      <div class="card"><h2>今天的学习路线</h2><div class="row"><span class="num">1</span>理解 Dataset / Training / Validation / Inference</div><div class="row"><span class="num">2</span>自己拍照，创造 Ryan vs Spencer 数据集</div><div class="row"><span class="num">3</span>把训练过程交给 AI Agent，但保留工程判断</div><div class="row"><span class="num">4</span>设计并开发网页端 AI 门禁系统</div></div>
+      <div class="card"><h2>最终成品</h2><p class="sub">浏览器打开摄像头，识别 Ryan / Spencer / Unknown；家庭成员显示绿色框，陌生人显示红色框，并展示 ACCESS GRANTED / DENIED。</p><div class="callout">目标不是背 AI 概念，而是亲手走完一次 AI 产品开发生命周期。</div></div>
+    </div>
+    <div class="foot">用 AI 创造更美好的生活</div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Identity Routing · 为什么先切身份</div>
+    <h1 class="title">这节课开始前，Studio OS 应该切到什么身份？</h1>
+    <div class="rolebar"><div class="role">Founder / Chongyu</div><div class="arrow">→</div><div class="role active">🎓 Education Manager</div><div class="arrow">→</div><div class="role active">AI Coding Instructor</div></div>
+    <div class="grid">
+      <div class="card"><h2>当前任务</h2><p class="sub">给 Ryan 和 Spencer 备课并现场授课。</p><div class="row"><span class="num">✓</span>读取学生与课程上下文</div><div class="row"><span class="num">✓</span>组织教学顺序</div><div class="row"><span class="num">✓</span>把理论压成最少必要知识</div></div>
+      <div class="card"><h2>如果任务变化</h2><p class="sub">如果要修改网页、部署课件、修复产品问题，就切到：</p><div class="callout amber">🛠️ Product & Systems Manager</div><p class="mini">如果要写小红书，则切到 📣 Content & Growth Manager。Role 会变，但学生上下文不能丢。</p></div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 1 · AI Mental Model</div>
+    <h1 class="title">AI 本质上在学什么？</h1>
+    <div class="flow"><div class="step">Input<br>一张图片 / 一段声音</div><div class="arrow">→</div><div class="step">Model<br>学到的判断能力</div><div class="arrow">→</div><div class="step">Output<br>猫 / 狗 / Ryan / Spencer</div></div>
+    <div class="grid3"><div class="card"><h2>猫狗分类</h2><p class="sub">猫的照片 → Model → Cat</p></div><div class="card"><h2>手写数字</h2><p class="sub">手写图片 → Model → 7</p></div><div class="card"><h2>人脸识别</h2><p class="sub">脸部图片 → Model → Ryan</p></div></div>
+    <div class="callout">课堂问题：AI 一开始什么都不知道，它怎么知道这是谁？</div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 1 · Dataset / Label</div>
+    <h1 class="title">Dataset 是 AI 的教材和题库</h1>
+    <div class="split">
+      <div class="card"><h2>三个最小概念</h2><div class="row"><span class="num">D</span><div><b>Dataset</b><br><span class="mini">很多带答案的数据集合。</span></div></div><div class="row"><span class="num">S</span><div><b>Sample</b><br><span class="mini">一条数据，比如一张 Ryan 的照片。</span></div></div><div class="row"><span class="num">L</span><div><b>Label</b><br><span class="mini">这张照片的正确答案，比如 “Ryan”。</span></div></div></div>
+      <div class="code">dataset/
+├── ryan/
+│   ├── 01.jpg  → Label: Ryan
+│   └── 02.jpg  → Label: Ryan
+└── spencer/
+    ├── 01.jpg  → Label: Spencer
+    └── 02.jpg  → Label: Spencer</div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 1 · Train / Validation / Test / Inference</div>
+    <h1 class="title">学习、模拟考试、上班</h1>
+    <div class="grid3"><div class="card"><h2>Training</h2><p class="sub">模型看训练照片，猜答案，错了就调整。</p><div class="pill">学习 / 做练习</div></div><div class="card"><h2>Validation</h2><p class="sub">拿没参与训练的照片小测，检查它是否真的学会。</p><div class="pill">模拟考试</div></div><div class="card"><h2>Inference</h2><p class="sub">模型训练完后，面对摄像头里的新人脸进行判断。</p><div class="pill">真正上班</div></div></div>
+    <div class="callout amber">Overfitting：如果 AI 只是背下训练照片，而不是学会“什么是 Ryan / Spencer”，换个角度或光线就可能失败。</div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 2 · Create Our Dataset</div>
+    <h1 class="title">孩子自己成为 Dataset Creator</h1>
+    <div class="grid">
+      <div class="card"><h2>拍照任务</h2><div class="row"><span class="num">1</span>Ryan 给 Spencer 拍，Spencer 给 Ryan 拍</div><div class="row"><span class="num">2</span>每人 10–15 张即可</div><div class="row"><span class="num">3</span>正脸、侧脸、近、远、笑、不笑、不同光线</div><div class="row"><span class="num">4</span>拖进对应文件夹</div></div>
+      <div class="card"><h2>马上暂停提问</h2><p class="sub">“What did we just create?”</p><div class="callout">A Dataset.</div><p class="sub">“Folder name is what?”</p><div class="callout">The Label.</div></div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 3 · Give the Work to AI Agent</div>
+    <h1 class="title">代码交给 AI，但思考不能交给 AI</h1>
+    <div class="code">I have two folders of face photos: dataset/ryan and dataset/spencer.
+Build the simplest possible face recognition experiment.
+Automatically detect faces, extract features, split train/validation,
+train a simple classifier, show validation accuracy, save the model,
+and create a webcam app for real-time prediction.</div>
+    <div class="flow"><div class="step">Raw Photos</div><div class="arrow">→</div><div class="step">Face Detection</div><div class="arrow">→</div><div class="step">Embedding + Classifier</div></div>
+    <div class="callout">每一步都问孩子：AI 现在在做什么？为什么不能把所有照片都拿去训练？</div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 4 · Inference</div>
+    <h1 class="title">让模型第一次“活起来”</h1>
+    <div class="split"><div class="card"><h2>现场测试</h2><div class="row"><span class="num">✓</span>Ryan 坐到摄像头前</div><div class="row"><span class="num">✓</span>Spencer 坐到摄像头前</div><div class="row"><span class="num">✓</span>戴帽子 / 侧脸 / 远一点 / 暗一点</div><div class="row"><span class="num">✓</span>Chongyu 老师走进去，观察它会不会硬猜</div></div><div class="card"><h2>新概念自然出现</h2><div class="pill">Confidence</div><div class="pill">Unknown</div><div class="pill">Dataset Bias</div><div class="pill">Generalization</div><p class="sub">门禁系统不能只会二选一，它必须知道什么时候说：我不确定。</p></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 5 · Model ≠ Product</div>
+    <h1 class="title">我们训练了模型，但还没有做出门禁系统</h1>
+    <div class="grid"><div class="card"><h2>AI Demo</h2><div class="row"><span class="check">✓</span>能区分 Ryan / Spencer</div><div class="row"><span class="x">×</span>没有用户界面</div><div class="row"><span class="x">×</span>没有数据库</div><div class="row"><span class="x">×</span>没有权限判断</div></div><div class="card"><h2>AI Product</h2><div class="row"><span class="check">✓</span>Camera + AI Model</div><div class="row"><span class="check">✓</span>Family Member Database</div><div class="row"><span class="check">✓</span>Authorization Logic</div><div class="row"><span class="check">✓</span>Green / Red Bounding Box + Alert</div></div></div>
+    <div class="callout">真正的 AI Engineer 不只训练模型，还要把模型放进一个可靠系统里。</div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 6 · Product Design</div>
+    <h1 class="title">让孩子自己设计 AI 门禁系统</h1>
+    <div class="flow"><div class="step">Camera<br>实时画面</div><div class="arrow">→</div><div class="step">Face Detection<br>找到脸</div><div class="arrow">→</div><div class="step">Recognition<br>判断身份</div></div>
+    <div class="flow"><div class="step">Database<br>家庭成员</div><div class="arrow">→</div><div class="step">Authorized?<br>权限判断</div><div class="arrow">→</div><div class="step">UI Feedback<br>开门 / 报警</div></div>
+    <div class="grid"><div class="callout">绿色框：Known + Authorized → ACCESS GRANTED</div><div class="callout warn">红色框：Unknown / Not Authorized → ACCESS DENIED</div></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 7 · MVP Requirements</div>
+    <h1 class="title">今天的网页端 MVP</h1>
+    <div class="grid"><div class="card"><h2>必须完成</h2><div class="row"><span class="num">1</span>网页端运行</div><div class="row"><span class="num">2</span>打开摄像头</div><div class="row"><span class="num">3</span>实时 bounding box</div><div class="row"><span class="num">4</span>识别 Ryan / Spencer / Unknown</div></div><div class="card"><h2>产品逻辑</h2><div class="row"><span class="num">5</span>Family Member 数据库</div><div class="row"><span class="num">6</span>Add / Edit / Delete members</div><div class="row"><span class="num">7</span>绿色 = 允许</div><div class="row"><span class="num">8</span>红色 = 拒绝 / 警报</div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 7 · Build with AI Agent</div>
+    <h1 class="title">把需求拆成里程碑，而不是一句话丢给 AI</h1>
+    <div class="grid3"><div class="card"><h2>Milestone 1</h2><p class="sub">Web UI + Camera</p></div><div class="card"><h2>Milestone 2</h2><p class="sub">Face Detection + Bounding Box</p></div><div class="card"><h2>Milestone 3</h2><p class="sub">Recognition + Confidence</p></div><div class="card"><h2>Milestone 4</h2><p class="sub">Family Member Database</p></div><div class="card"><h2>Milestone 5</h2><p class="sub">Authorization Logic</p></div><div class="card"><h2>Milestone 6</h2><p class="sub">Testing + Debugging</p></div></div>
+    <div class="callout">每完成一步，让孩子自己测试、找 bug、决定下一步，而不是老师直接给答案。</div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Phase 8 · Final Demo</div>
+    <h1 class="title">最终演示：这是我们的 AI 门禁产品</h1>
+    <div class="split"><div class="code">┌────────────────────────────┐
+│        AI FACE ACCESS       │
+│                            │
+│   🟩 Ryan  94%              │
+│                            │
+│     ✓ ACCESS GRANTED        │
+│                            │
+│ Family Members              │
+│ Ryan      Authorized         │
+│ Spencer   Authorized         │
+└────────────────────────────┘</div><div class="card"><h2>演示顺序</h2><div class="row"><span class="num">1</span>Ryan 测试 → 绿色</div><div class="row"><span class="num">2</span>Spencer 测试 → 绿色</div><div class="row"><span class="num">3</span>老师测试 → Unknown / 红色</div><div class="row"><span class="num">4</span>修改数据库，再重新测试</div></div></div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Reflection · 让孩子自己复述</div>
+    <h1 class="title">今天每个概念发生在哪里？</h1>
+    <div class="flow"><div class="step">拍照片<br>Dataset</div><div class="arrow">→</div><div class="step">AI 学照片<br>Training</div><div class="arrow">→</div><div class="step">保留照片考试<br>Validation</div></div>
+    <div class="flow"><div class="step">保存能力<br>Model</div><div class="arrow">→</div><div class="step">摄像头识别<br>Inference</div><div class="arrow">→</div><div class="step">数据库 + UI<br>Product</div></div>
+    <div class="callout">如果他们能用自己的话讲出这条链路，这节课就真正成功了。</div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">Role Routing · 课后下一步</div>
+    <h1 class="title">课后 Studio OS 应该怎么切换身份？</h1>
+    <div class="grid3"><div class="card"><h2>🎓 Education Manager</h2><p class="sub">记录学生表现、难点、next step，生成下一节 lesson plan。</p></div><div class="card"><h2>🛠️ Product Manager</h2><p class="sub">把课堂产出的网页、课件、数据库字段继续完善。</p></div><div class="card"><h2>📣 Content Manager</h2><p class="sub">把真实课堂故事转成小红书招生内容。</p></div></div>
+    <div class="callout amber">身份可以切换，但 Ryan & Spencer 的课堂上下文、产品进度和内容素材要持续沉淀进 Studio OS。</div>
+  </section>
+</main>
+</body>
+</html>
