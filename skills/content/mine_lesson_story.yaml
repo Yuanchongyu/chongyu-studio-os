@@ -1,0 +1,36 @@
+name: mine_lesson_story
+owner: Content Growth Manager
+purpose: Turn a processed lesson into a publishable Xiaohongshu story only when the classroom evidence is strong enough.
+required_context: [source_lesson, student_profile, recent_lessons, published_content, brand_voice]
+inputs:
+  - factual lesson events
+  - achievement
+  - difficulty
+  - student agency
+  - teacher observation
+  - source_lesson_id
+steps:
+  - find the strongest before_to_after change in the lesson
+  - identify tension such as a bug, misconception, failed attempt, unexpected result or student-led decision
+  - identify the student's own action rather than attributing everything to the teacher or AI
+  - generate up to three story angles internally
+  - select the single strongest angle
+  - draft a Xiaohongshu title, hook and concise body when publishability is high
+  - otherwise return no draft and keep only a content signal on the lesson
+publishability:
+  strong_when:
+    - there is concrete project evidence
+    - there is a visible change, surprise or problem-solution arc
+    - the student did something worth observing
+    - the story teaches the audience something beyond a generic class recap
+writeback:
+  strong_story: content_items:draft
+  weak_story: none
+metadata:
+  source_type: lesson_session
+  preserve_source_lesson_id: true
+rules:
+  - never invent quotes, outcomes, emotions or parent reactions
+  - do not create a separate idea item before a draft
+  - one strong draft is better than multiple generic posts
+  - keep minors' private or identifying details out of public-facing copy unless explicitly approved
