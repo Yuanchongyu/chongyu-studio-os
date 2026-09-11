@@ -27,10 +27,10 @@
   async function runPostClassHandoff(id, text, token) {
     if (id !== 'education') return;
     try {
-      const response = await fetch('/api/process-lesson', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-studio-access-token': token },
-        body: JSON.stringify({ raw_note: text })
+        body: JSON.stringify({ action: 'process_lesson', raw_note: text })
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.triggered) return;
