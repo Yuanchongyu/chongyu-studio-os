@@ -1,3 +1,5 @@
+import { runLessonWorkflow } from '../lib/lesson-workflow.js';
+
 const MANAGERS = {
   chief: {
     name: 'Chief of Staff',
@@ -26,7 +28,6 @@ function studioKey() {
 function supabaseHeaders() {
   const key = studioKey();
   const headers = { apikey: key, 'Content-Type': 'application/json' };
-  // Legacy service_role keys are JWTs. New sb_secret_* keys should be sent as apikey.
   if (key.startsWith('eyJ')) headers.Authorization = `Bearer ${key}`;
   return headers;
 }
@@ -56,9 +57,7 @@ async function insertAiRun(payload) {
       headers: { ...supabaseHeaders(), Prefer: 'return=minimal' },
       body: JSON.stringify(payload)
     });
-  } catch (_) {
-    // Logging must never break the user's chat request.
-  }
+  } catch (_) {}
 }
 
 async function loadContext(managerId) {
@@ -167,7 +166,20 @@ export default async function handler(req, res) {
   const suppliedToken = req.headers['x-studio-access-token'];
   if (!suppliedToken || suppliedToken !== expectedToken) return json(res, 401, { error: 'Studio access token is missing or invalid.' });
 
-  const { managerId = 'education', model = 'Auto', messages = [], locale = 'zh' } = req.body || {};
+  const requestBody = req.body || {};
+  if (requestBody.action === 'process_lesson') {
+    try {
+      const rawNote = String(requestBody.raw_note || '').trim();
+      if (!rawNote) return json(res, 400, { error: 'raw_note is required.' });
+      const result = await runLessonWorkflow(rawNote, { force: Boolean(requestBody.force) });
+      return json(res, 200, { ok: true, ...result });
+    } catch (error) {
+      console.error('Post-class workflow failed', error);
+      return json(res, 500, { error: error.message || 'Post-class workflow failed.' });
+    }
+  }
+
+  const { managerId = 'education', model = 'Auto', messages = [], locale = 'zh' } = requestBody;
   const manager = MANAGERS[managerId];
   if (!manager) return json(res, 400, { error: 'Unknown manager.' });
   const cleanMessages = trimMessages(messages);
