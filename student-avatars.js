@@ -8,7 +8,7 @@
   async function portraitFor(slug){
     slug=String(slug||'').toLowerCase();if(slug in state.portraits)return state.portraits[slug];
     const cached=readPortraitCache(slug);if(cached){state.portraits[slug]=cached;return cached}
-    try{const r=await fetch(`/api/student-portrait?student=${encodeURIComponent(slug)}`,{credentials:'same-origin'});if(!r.ok){state.portraits[slug]=null;return null;}const d=await r.json();const url=d?.portrait?.signed_url||null;state.portraits[slug]=url;if(url)writePortraitCache(slug,url);return url;}catch(e){state.portraits[slug]=null;return null;}
+    try{const r=await fetch(`/api/parent-portal?student=${encodeURIComponent(slug)}`,{credentials:'same-origin'});if(!r.ok){state.portraits[slug]=null;return null;}const d=await r.json();const p=(d.artifacts||[]).find(a=>a.artifact_type==='portrait'&&a.signed_url);const url=p?.signed_url||null;state.portraits[slug]=url;if(url)writePortraitCache(slug,url);return url;}catch(e){state.portraits[slug]=null;return null;}
   }
   window.getStudentPortrait=portraitFor;
   function img(url,name,cls='student-avatar-photo'){return `<img class="${cls}" src="${esc(url)}" alt="${esc(name)}" loading="eager" decoding="async" fetchpriority="high">`;}
