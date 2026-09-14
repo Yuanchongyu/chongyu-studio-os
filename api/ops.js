@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 const PROJECT_URL='https://lclkojyfyqhefwmkmgym.supabase.co';
 const SESSION_COOKIE='studio_session';
 const FINANCE_COOKIE='studio_finance_session';
+const AUTO_SHIPPING_FEE=10;
 function key(){return process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||'';}
 function headers(extra={}){const k=key();const h={apikey:k,'Content-Type':'application/json',...extra};if(k.startsWith('eyJ'))h.Authorization=`Bearer ${k}`;return h;}
 function cookies(req){const raw=req.headers.cookie||'';return Object.fromEntries(raw.split(';').map(p=>{const i=p.indexOf('=');return i<0?['','']:[p.slice(0,i).trim(),decodeURIComponent(p.slice(i+1).trim())]}).filter(([k])=>k));}
@@ -60,7 +61,7 @@ function setFinanceCookie(res,value,maxAge=43200){res.setHeader('Set-Cookie',`${
 async function financeBootstrap(){const [txns,settingsRows]=await Promise.all([
   rest('finance_transactions','select=id,txn_date,direction,category,description,hours,amount,payment_method,km,fuel_price_per_l,cost_per_km,notes,created_at,updated_at&order=txn_date.desc,created_at.desc'),
   rest('finance_settings','select=setting_key,setting_value&setting_key=in.(default_cost_per_km,default_fuel_price_per_l)')
-]);return {transactions:txns,settings:Object.fromEntries(settingsRows.map(x=>[x.setting_key,x.setting_value]))};}
+]);return {transactions:txns,settings:Object.fromEntries(settingsRows.map(x=>[x.setting_key,x.setting_value])),auto_shipping_fee:AUTO_SHIPPING_FEE};}
 async function normalizedFinanceTxn(payload,existing={}){
   const direction=['income','expense'].includes(payload.direction)?payload.direction:(existing.direction||'expense');
   const category=text(payload.category,80)||existing.category||'other';
@@ -71,6 +72,19 @@ async function normalizedFinanceTxn(payload,existing={}){
   if(direction==='expense'&&category==='transport'&&km!==null)amount=Math.round(km*defaultKm*100)/100;
   if(amount===null)amount=Number(existing.amount)||0;
   return {txn_date:text(payload.txn_date,10)||existing.txn_date||new Date().toISOString().slice(0,10),direction,category,description:text(payload.description,500)||null,hours:num(payload.hours),amount,payment_method:text(payload.payment_method,80)||null,km:category==='transport'?km:null,fuel_price_per_l:category==='transport'?defaultFuel:null,cost_per_km:category==='transport'?defaultKm:null,notes:text(payload.notes,2000)||null,updated_at:new Date().toISOString()};
+}
+function shippingNote(incomeId){return `auto_shipping_for:${incomeId}`;}
+async function ensureShippingExpense(income){
+  if(!income?.id)return;
+  const note=shippingNote(income.id);
+  const found=await rest('finance_transactions',`select=id&notes=eq.${encodeURIComponent(note)}&limit=1`);
+  const body={txn_date:income.txn_date,direction:'expense',category:'other',description:'自动邮费',hours:null,amount:AUTO_SHIPPING_FEE,payment_method:null,km:null,fuel_price_per_l:null,cost_per_km:null,notes:note,updated_at:new Date().toISOString()};
+  if(found[0]?.id)await patch('finance_transactions',`id=eq.${encodeURIComponent(found[0].id)}`,body);
+  else {delete body.updated_at;await insert('finance_transactions',body);}
+}
+async function removeShippingExpense(incomeId){
+  if(!incomeId)return;
+  await remove('finance_transactions',`notes=eq.${encodeURIComponent(shippingNote(incomeId))}`);
 }
 
 export default async function handler(req,res){
@@ -105,13 +119,13 @@ export default async function handler(req,res){
     }
     if(action.startsWith('finance_')&&!(await financeAuth(req)))return res.status(423).json({locked:true,error:'Finance session is locked.'});
     if(action==='finance_create'){
-      const body=await normalizedFinanceTxn(payload);delete body.updated_at;const rows=await insert('finance_transactions',body);return res.status(200).json({ok:true,item:rows[0]||null});
+      const body=await normalizedFinanceTxn(payload);delete body.updated_at;const rows=await insert('finance_transactions',body);const item=rows[0]||null;if(item?.direction==='income')await ensureShippingExpense(item);return res.status(200).json({ok:true,item});
     }
     if(action==='finance_update'){
-      const id=text(payload.id,120);if(!id)throw new Error('Missing transaction id.');const existing=(await rest('finance_transactions',`select=*&id=eq.${encodeURIComponent(id)}&limit=1`))[0];if(!existing)throw new Error('Transaction not found.');const body=await normalizedFinanceTxn(payload,existing);const rows=await patch('finance_transactions',`id=eq.${encodeURIComponent(id)}`,body);return res.status(200).json({ok:true,item:rows[0]||null});
+      const id=text(payload.id,120);if(!id)throw new Error('Missing transaction id.');const existing=(await rest('finance_transactions',`select=*&id=eq.${encodeURIComponent(id)}&limit=1`))[0];if(!existing)throw new Error('Transaction not found.');const body=await normalizedFinanceTxn(payload,existing);const rows=await patch('finance_transactions',`id=eq.${encodeURIComponent(id)}`,body);const item=rows[0]||null;if(item?.direction==='income')await ensureShippingExpense(item);else if(existing.direction==='income')await removeShippingExpense(id);return res.status(200).json({ok:true,item});
     }
     if(action==='finance_delete'){
-      const id=text(payload.id,120);if(!id)throw new Error('Missing transaction id.');await remove('finance_transactions',`id=eq.${encodeURIComponent(id)}`);return res.status(200).json({ok:true});
+      const id=text(payload.id,120);if(!id)throw new Error('Missing transaction id.');const existing=(await rest('finance_transactions',`select=id,direction&Id=eq.${encodeURIComponent(id)}&limit=1`)).find(Boolean);if(existing?.direction==='income')await removeShippingExpense(id);await remove('finance_transactions',`id=eq.${encodeURIComponent(id)}`);return res.status(200).json({ok:true});
     }
     if(action==='finance_update_settings'){
       const cpk=num(payload.default_cost_per_km),fuel=num(payload.default_fuel_price_per_l);if(cpk===null||cpk<=0)throw new Error('Invalid cost per km.');if(fuel===null||fuel<=0)throw new Error('Invalid fuel price.');await patch('finance_settings','setting_key=eq.default_cost_per_km',{setting_value:String(cpk),updated_at:new Date().toISOString()});await patch('finance_settings','setting_key=eq.default_fuel_price_per_l',{setting_value:String(fuel),updated_at:new Date().toISOString()});return res.status(200).json({ok:true});
