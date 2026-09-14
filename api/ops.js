@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 const PROJECT_URL='https://lclkojyfyqhefwmkmgym.supabase.co';
 const SESSION_COOKIE='studio_session';
+const FINANCE_COOKIE='studio_finance_session';
 function key(){return process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||'';}
 function headers(extra={}){const k=key();const h={apikey:k,'Content-Type':'application/json',...extra};if(k.startsWith('eyJ'))h.Authorization=`Bearer ${k}`;return h;}
 function cookies(req){const raw=req.headers.cookie||'';return Object.fromEntries(raw.split(';').map(p=>{const i=p.indexOf('=');return i<0?['','']:[p.slice(0,i).trim(),decodeURIComponent(p.slice(i+1).trim())]}).filter(([k])=>k));}
@@ -11,8 +12,10 @@ function auth(req){const expected=process.env.STUDIO_ACCESS_TOKEN||'';const supp
 async function rest(table,q=''){const r=await fetch(`${PROJECT_URL}/rest/v1/${table}${q?`?${q}`:''}`,{headers:headers()});const t=await r.text();if(!r.ok)throw new Error(`${table}: ${r.status} ${t.slice(0,400)}`);return t?JSON.parse(t):[];}
 async function insert(table,body){const r=await fetch(`${PROJECT_URL}/rest/v1/${table}`,{method:'POST',headers:headers({Prefer:'return=representation'}),body:JSON.stringify(body)});const t=await r.text();if(!r.ok)throw new Error(`${table}: ${r.status} ${t.slice(0,400)}`);return t?JSON.parse(t):[];}
 async function patch(table,q,body){const r=await fetch(`${PROJECT_URL}/rest/v1/${table}?${q}`,{method:'PATCH',headers:headers({Prefer:'return=representation'}),body:JSON.stringify(body)});const t=await r.text();if(!r.ok)throw new Error(`${table}: ${r.status} ${t.slice(0,400)}`);return t?JSON.parse(t):[];}
+async function remove(table,q){const r=await fetch(`${PROJECT_URL}/rest/v1/${table}?${q}`,{method:'DELETE',headers:headers({Prefer:'return=representation'})});const t=await r.text();if(!r.ok)throw new Error(`${table}: ${r.status} ${t.slice(0,400)}`);return t?JSON.parse(t):[];}
 async function upsert(table,body,onConflict){const r=await fetch(`${PROJECT_URL}/rest/v1/${table}?on_conflict=${encodeURIComponent(onConflict)}`,{method:'POST',headers:headers({Prefer:'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(body)});const t=await r.text();if(!r.ok)throw new Error(`${table}: ${r.status} ${t.slice(0,400)}`);return t?JSON.parse(t):[];}
 const text=(v,n=50000)=>String(v??'').trim().slice(0,n);
+const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
 async function studentId(payload){if(payload?.student_id)return String(payload.student_id);const slug=text(payload?.student_slug,120);if(!slug)return null;const rows=await rest('students',`select=id&slug=eq.${encodeURIComponent(slug)}&limit=1`);return rows[0]?.id||null;}
 async function bootstrap(){
   const specs=[
@@ -48,6 +51,28 @@ async function refreshBrief(payload){
   const rows=await upsert('daily_briefs',{brief_date:day,summary,review,urgent_items:urgent,upcoming_items:upcoming,ideas:ideaList,source_snapshot:snapshot,generated_by:'studio_ops'},'brief_date');
   return rows[0]||null;
 }
+
+const sha=v=>crypto.createHash('sha256').update(String(v||'')).digest('hex');
+async function financeSetting(k){const r=await rest('finance_settings',`select=setting_value&setting_key=eq.${encodeURIComponent(k)}&limit=1`);return r[0]?.setting_value||'';}
+async function financeSig(){const root=process.env.STUDIO_ACCESS_TOKEN||'';const pinHash=await financeSetting('finance_pin_sha256');return root&&pinHash?crypto.createHmac('sha256',root).update(`finance-v1:${pinHash}`).digest('hex'):'';}
+async function financeAuth(req){const c=cookies(req)[FINANCE_COOKIE]||'';const s=await financeSig();return Boolean(c&&s&&safeEqual(c,s));}
+function setFinanceCookie(res,value,maxAge=43200){res.setHeader('Set-Cookie',`${FINANCE_COOKIE}=${encodeURIComponent(value)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`);}
+async function financeBootstrap(){const [txns,settingsRows]=await Promise.all([
+  rest('finance_transactions','select=id,txn_date,direction,category,description,hours,amount,payment_method,km,fuel_price_per_l,cost_per_km,notes,created_at,updated_at&order=txn_date.desc,created_at.desc'),
+  rest('finance_settings','select=setting_key,setting_value&setting_key=in.(default_cost_per_km,default_fuel_price_per_l)')
+]);return {transactions:txns,settings:Object.fromEntries(settingsRows.map(x=>[x.setting_key,x.setting_value]))};}
+async function normalizedFinanceTxn(payload,existing={}){
+  const direction=['income','expense'].includes(payload.direction)?payload.direction:(existing.direction||'expense');
+  const category=text(payload.category,80)||existing.category||'other';
+  const km=num(payload.km);
+  const defaultKm=Number(await financeSetting('default_cost_per_km'))||0.23;
+  const defaultFuel=Number(await financeSetting('default_fuel_price_per_l'))||2.30;
+  let amount=num(payload.amount);
+  if(direction==='expense'&&category==='transport'&&km!==null)amount=Math.round(km*defaultKm*100)/100;
+  if(amount===null)amount=Number(existing.amount)||0;
+  return {txn_date:text(payload.txn_date,10)||existing.txn_date||new Date().toISOString().slice(0,10),direction,category,description:text(payload.description,500)||null,hours:num(payload.hours),amount,payment_method:text(payload.payment_method,80)||null,km:category==='transport'?km:null,fuel_price_per_l:category==='transport'?defaultFuel:null,cost_per_km:category==='transport'?defaultKm:null,notes:text(payload.notes,2000)||null,updated_at:new Date().toISOString()};
+}
+
 export default async function handler(req,res){
   if(!auth(req))return res.status(401).json({error:'Founder session is missing or invalid.'});
   try{
@@ -69,6 +94,30 @@ export default async function handler(req,res){
     }
     if(action==='update_action_item'){
       const id=text(payload.id,120);if(!id)throw new Error('Action id is required.');const body={};if(['open','done','archived'].includes(payload.status))body.status=payload.status;if(['low','normal','high','urgent'].includes(payload.priority))body.priority=payload.priority;if(payload.due_at!==undefined)body.due_at=payload.due_at||null;body.updated_at=new Date().toISOString();const rows=await patch('action_items',`id=eq.${encodeURIComponent(id)}`,body);return res.status(200).json({ok:true,item:rows[0]||null});
+    }
+
+    if(action==='finance_unlock'){
+      const expected=await financeSetting('finance_pin_sha256');if(!expected||!safeEqual(sha(payload.pin),expected))return res.status(403).json({error:'密码不正确'});const s=await financeSig();setFinanceCookie(res,s);return res.status(200).json({ok:true});
+    }
+    if(action==='finance_lock'){setFinanceCookie(res,'',0);return res.status(200).json({ok:true});}
+    if(action==='finance_bootstrap'){
+      if(!(await financeAuth(req)))return res.status(423).json({locked:true});return res.status(200).json({ok:true,data:await financeBootstrap()});
+    }
+    if(action.startsWith('finance_')&&!(await financeAuth(req)))return res.status(423).json({locked:true,error:'Finance session is locked.'});
+    if(action==='finance_create'){
+      const body=await normalizedFinanceTxn(payload);delete body.updated_at;const rows=await insert('finance_transactions',body);return res.status(200).json({ok:true,item:rows[0]||null});
+    }
+    if(action==='finance_update'){
+      const id=text(payload.id,120);if(!id)throw new Error('Missing transaction id.');const existing=(await rest('finance_transactions',`select=*&id=eq.${encodeURIComponent(id)}&limit=1`))[0];if(!existing)throw new Error('Transaction not found.');const body=await normalizedFinanceTxn(payload,existing);const rows=await patch('finance_transactions',`id=eq.${encodeURIComponent(id)}`,body);return res.status(200).json({ok:true,item:rows[0]||null});
+    }
+    if(action==='finance_delete'){
+      const id=text(payload.id,120);if(!id)throw new Error('Missing transaction id.');await remove('finance_transactions',`id=eq.${encodeURIComponent(id)}`);return res.status(200).json({ok:true});
+    }
+    if(action==='finance_update_settings'){
+      const cpk=num(payload.default_cost_per_km),fuel=num(payload.default_fuel_price_per_l);if(cpk===null||cpk<=0)throw new Error('Invalid cost per km.');if(fuel===null||fuel<=0)throw new Error('Invalid fuel price.');await patch('finance_settings','setting_key=eq.default_cost_per_km',{setting_value:String(cpk),updated_at:new Date().toISOString()});await patch('finance_settings','setting_key=eq.default_fuel_price_per_l',{setting_value:String(fuel),updated_at:new Date().toISOString()});return res.status(200).json({ok:true});
+    }
+    if(action==='finance_change_pin'){
+      const pin=text(payload.pin,32);if(pin.length<4)throw new Error('密码至少 4 位。');await patch('finance_settings','setting_key=eq.finance_pin_sha256',{setting_value:sha(pin),updated_at:new Date().toISOString()});const s=await financeSig();setFinanceCookie(res,s);return res.status(200).json({ok:true});
     }
     throw new Error('Unknown action.');
   }catch(error){console.error('Studio ops error',error);return res.status(400).json({error:error.message||'Studio ops failed.'});}
