@@ -17,6 +17,7 @@
 
   function deckFor(names,title=''){
     const text=`${names.join(' ')} ${title}`;
+    if(/Fall|Risk|摔倒|风险/i.test(text)) return null;
     if(/Ryan|Spencer|人脸|Face/i.test(text)) return {href:'/decks/face-access.html',label:isZh()?'打开人脸识别课件':'Open face-access deck'};
     if(/Marcos|Mason|IMU|MotionAccess/i.test(text)) return {href:'/decks/imu-motionaccess.html',label:isZh()?'打开第7节 IMU 课件':'Open Session 7 IMU deck'};
     return null;
@@ -24,6 +25,13 @@
 
   function lessonTemplate(names,title=''){
     const text=`${names.join(' ')} ${title}`;
+    if(/Fall|Risk|摔倒|风险/i.test(text)) return {
+      what:isZh()?'把老人摔倒从“检测到一次冲击”升级成多因素风险判断系统：事件 → 恢复 → 风险 → 响应。':'Upgrade fall detection from a single impact trigger into a multi-factor risk system: event → recovery → risk → response.',
+      why:isZh()?'把 Mason 已经提出的 recovery、误报、方向、年龄等问题变成 Feature / Scenario / Decision Rule，同时让 Marcos 的 BLE 数据真正进入产品决策。':'Turn Mason’s recovery, false-alarm, direction and age questions into features, scenarios and decision rules, while turning Marcos’s BLE stream into product decisions.',
+      outcome:isZh()?'完成 System Architecture + Fall Event Schema + Risk Matrix，并让至少一个真实或模拟事件输出 LOW / MEDIUM / HIGH。':'Finish a system architecture, fall-event schema and risk matrix, then make at least one real or simulated event produce LOW / MEDIUM / HIGH.',
+      flow:isZh()?['看架构图','拆 4 个场景','定义 Event Schema','设计 Risk Matrix','接入 BLE / 模拟事件','主动制造误报','Engineer Demo']:['Review architecture','Compare 4 scenarios','Define event schema','Design risk matrix','Connect BLE / simulate events','Break the system','Engineer demo'],
+      prepare:isZh()?['两张英文系统信息图','XIAO nRF52840 Sense + BLE','Browser dashboard','白纸：Event Schema / Risk Matrix','Simulated event fallback']:['Two English system infographics','XIAO nRF52840 Sense + BLE','Browser dashboard','Paper: event schema / risk matrix','Simulated-event fallback']
+    };
     if(/Ryan|Spencer|人脸|Face/i.test(text)) return {
       what:isZh()?'亲手建立人脸 Dataset，训练第一个识别模型，再把它放进一个真实门禁系统。':'Build a face dataset, train a first recognition model, then place it inside a real access-control system.',
       why:isZh()?'把 Dataset / Training / Validation / Inference 从抽象术语变成亲手做过的过程，并理解“模型只是产品的一部分”。':'Turn Dataset / Training / Validation / Inference into a hands-on process and see that a model is only one part of a product.',
@@ -56,6 +64,11 @@
     return names;
   }
 
+  function planMaterials(g){
+    const m=(g?.plans||[]).flatMap(p=>Array.isArray(p.materials)?p.materials:[]);
+    return [...new Set(m.map(x=>typeof x==='string'?x:(x?.label||x?.name||'')).filter(Boolean))];
+  }
+
   function groupLessons(){
     const ext=window.STUDIO_EXT||{};const plans=(ext.lessonPlans||[]).filter(p=>p.status!=='archived'&&p.status!=='completed');
     const events=(ext.calendarEvents||[]).filter(e=>e.event_type==='lesson'&&new Date(e.start_at)>=new Date(now().getTime()-6*60*60*1000));
@@ -67,7 +80,7 @@
       });
       matched.forEach(p=>used.add(p.id));
       const title=matched[0]?.title||e.title||'';const deck=deckFor(names,title);const tpl=lessonTemplate(names,title);
-      const hasPlan=matched.length>0;const readiness=Math.min(100,(hasPlan?45:0)+(deck?35:0)+20);
+      const hasPlan=matched.length>0;const hasAssets=Boolean(deck)||matched.some(p=>Array.isArray(p.materials)&&p.materials.length);const readiness=Math.min(100,(hasPlan?45:0)+(hasAssets?35:0)+20);
       groups.push({key:`event:${e.id}`,names,title,event:e,plans:matched,deck,tpl,readiness,status:hasPlan&&deck?'ready':'partial'});
     }
     const leftover=plans.filter(p=>!used.has(p.id));
@@ -76,7 +89,7 @@
       const s=studentById(p.student_id);if(!s)return;const sig=`${p.title}|${p.scheduled_for||''}`;if(!bySig.has(sig))bySig.set(sig,[]);bySig.get(sig).push({p,s});
     });
     bySig.forEach(rows=>{
-      const names=rows.map(x=>x.s.name);const p=rows[0].p;const deck=deckFor(names,p.title);const tpl=lessonTemplate(names,p.title);const readiness=Math.min(100,45+(deck?35:0)+(p.scheduled_for?20:0));
+      const names=rows.map(x=>x.s.name);const p=rows[0].p;const deck=deckFor(names,p.title);const tpl=lessonTemplate(names,p.title);const hasAssets=Boolean(deck)||rows.some(x=>Array.isArray(x.p.materials)&&x.p.materials.length);const readiness=Math.min(100,45+(hasAssets?35:0)+(p.scheduled_for?20:0));
       groups.push({key:`plan:${p.id}`,names,title:p.title,event:null,plans:rows.map(x=>x.p),deck,tpl,readiness,status:readiness>=95?'ready':'partial',scheduled_for:p.scheduled_for||null});
     });
     groups.sort((a,b)=>new Date(a.event?.start_at||a.scheduled_for||'2999-01-01')-new Date(b.event?.start_at||b.scheduled_for||'2999-01-01'));
@@ -93,7 +106,7 @@
   function checks(g){
     return [
       [true,isZh()?'课程主题已确定':'Topic defined'],
-      [Boolean(g.deck),isZh()?'课件已准备':'Deck ready'],
+      [Boolean(g.deck)||planMaterials(g).length>0,isZh()?'课件 / 素材已准备':'Deck / assets ready'],
       [Boolean(g.event?.start_at||g.scheduled_for),isZh()?'已排期':'Scheduled'],
       [Boolean(g.plans?.length),isZh()?'备课计划已记录':'Prep plan recorded']
     ];
@@ -106,12 +119,12 @@
 
   function hero(g){
     if(!g)return `<section class="next-lesson-hero glass"><div class="eyebrow cyan">NEXT LESSON</div><h2>${isZh()?'还没有下一节课':'No next lesson yet'}</h2><p>${isZh()?'从右上角新建备课，或先在课程日历安排下一节课。':'Create a prep plan or schedule the next lesson in the calendar.'}</p></section>`;
-    const plan=rawPlan(g);const c=checks(g);
-    return `<section class="next-lesson-hero glass"><div class="next-lesson-head"><div><div class="eyebrow cyan">NEXT LESSON</div><h2>${esc(g.names.join(' + '))}</h2><p>${esc(g.title)}</p><div class="next-lesson-meta"><span>${sessionLabel(g)}</span><span>${esc(when(g))}</span><span>${g.names.length>1?(isZh()?'共同课堂 · 个人记录分开':'Shared class · individual records'):isZh()?'个人课堂':'Individual lesson'}</span></div></div><span class="prep-status ${g.status}">${readyLabel(g)}</span></div><div class="lesson-brief-grid"><div class="lesson-brief-box"><div class="lesson-brief-label">WHAT</div><h4>${isZh()?'这节课做什么？':'What are we doing?'}</h4><p>${esc(g.tpl.what)}</p></div><div class="lesson-brief-box"><div class="lesson-brief-label">WHY</div><h4>${isZh()?'为什么现在学？':'Why now?'}</h4><p>${esc(g.tpl.why)}</p></div><div class="lesson-brief-box wide"><div class="lesson-brief-label">OUTCOME</div><h4>${isZh()?'下课前必须完成':'Must-have outcome'}</h4><p>${esc(g.tpl.outcome)}</p></div><div class="lesson-brief-box wide"><div class="lesson-brief-label">FLOW</div><div class="lesson-flow">${g.tpl.flow.map((x,i)=>`${i?'<i>→</i>':''}<span>${i+1}. ${esc(x)}</span>`).join('')}</div></div><div class="lesson-brief-box"><div class="lesson-brief-label">PREPARE</div><h4>${isZh()?'上课前准备':'Before class'}</h4><p>${g.tpl.prepare.map(x=>`✓ ${esc(x)}`).join('<br>')}</p></div><div class="lesson-brief-box"><div class="lesson-brief-label">ASSETS</div><div class="prep-checks">${c.map(([ok,label])=>`<span class="prep-check ${ok?'':'missing'}">${ok?'✓':'○'} ${esc(label)}</span>`).join('')}</div></div></div><div class="lesson-actions">${g.deck?`<a class="primary" href="${g.deck.href}" target="_blank" rel="noopener">▶ ${esc(g.deck.label)}</a>`:''}<button class="prep-secondary" onclick="openPrepModal()">✎ ${g.plans?.length?(isZh()?'编辑 / 新增备课':'Edit / add prep'):(isZh()?'补充备课计划':'Add prep plan')}</button>${!g.plans?.length?`<button class="prep-secondary" onclick="openPrepModal()">✨ ${isZh()?'根据课件生成备课':'Generate from deck'}</button>`:''}</div>${plan?`<details class="full-plan"><summary>${isZh()?'查看完整教案 / 原始备课笔记':'View full lesson plan / raw prep notes'}</summary><div class="full-plan-text">${esc(plan).replace(/\\\\n/g,'\n').replace(/\n/g,'<br>')}</div></details>`:''}</section>`;
+    const plan=rawPlan(g);const c=checks(g);const materials=planMaterials(g);
+    return `<section class="next-lesson-hero glass"><div class="next-lesson-head"><div><div class="eyebrow cyan">NEXT LESSON</div><h2>${esc(g.names.join(' + '))}</h2><p>${esc(g.title)}</p><div class="next-lesson-meta"><span>${sessionLabel(g)}</span><span>${esc(when(g))}</span><span>${g.names.length>1?(isZh()?'共同课堂 · 个人记录分开':'Shared class · individual records'):isZh()?'个人课堂':'Individual lesson'}</span></div></div><span class="prep-status ${g.status}">${readyLabel(g)}</span></div><div class="lesson-brief-grid"><div class="lesson-brief-box"><div class="lesson-brief-label">WHAT</div><h4>${isZh()?'这节课做什么？':'What are we doing?'}</h4><p>${esc(g.tpl.what)}</p></div><div class="lesson-brief-box"><div class="lesson-brief-label">WHY</div><h4>${isZh()?'为什么现在学？':'Why now?'}</h4><p>${esc(g.tpl.why)}</p></div><div class="lesson-brief-box wide"><div class="lesson-brief-label">OUTCOME</div><h4>${isZh()?'下课前必须完成':'Must-have outcome'}</h4><p>${esc(g.tpl.outcome)}</p></div><div class="lesson-brief-box wide"><div class="lesson-brief-label">FLOW</div><div class="lesson-flow">${g.tpl.flow.map((x,i)=>`${i?'<i>→</i>':''}<span>${i+1}. ${esc(x)}</span>`).join('')}</div></div><div class="lesson-brief-box"><div class="lesson-brief-label">PREPARE</div><h4>${isZh()?'上课前准备':'Before class'}</h4><p>${g.tpl.prepare.map(x=>`✓ ${esc(x)}`).join('<br>')}</p></div><div class="lesson-brief-box"><div class="lesson-brief-label">ASSETS</div><div class="prep-checks">${c.map(([ok,label])=>`<span class="prep-check ${ok?'':'missing'}">${ok?'✓':'○'} ${esc(label)}</span>`).join('')}</div>${materials.length?`<div class="prep-material-list">${materials.slice(0,4).map(x=>`<small>• ${esc(x)}</small>`).join('')}</div>`:''}</div></div><div class="lesson-actions">${g.deck?`<a class="primary" href="${g.deck.href}" target="_blank" rel="noopener">▶ ${esc(g.deck.label)}</a>`:''}<button class="prep-secondary" onclick="openPrepModal()">✎ ${g.plans?.length?(isZh()?'编辑 / 新增备课':'Edit / add prep'):(isZh()?'补充备课计划':'Add prep plan')}</button>${!g.plans?.length?`<button class="prep-secondary" onclick="openPrepModal()">✨ ${isZh()?'根据课件生成备课':'Generate from deck'}</button>`:''}</div>${plan?`<details class="full-plan"><summary>${isZh()?'查看完整教案 / 原始备课笔记':'View full lesson plan / raw prep notes'}</summary><div class="full-plan-text">${esc(plan).replace(/\\\\n/g,'\n').replace(/\n/g,'<br>')}</div></details>`:''}</section>`;
   }
 
   function upcoming(groups,current){const rest=groups.filter(g=>!current||g.key!==current.key);if(!rest.length)return '';
-    return `<div class="upcoming-heading"><div><div class="eyebrow">UPCOMING</div><h3>${isZh()?'其他待备课程':'Other upcoming lessons'}</h3></div><span>${isZh()?'历史课程已自动留在「过往课程」':'Completed lessons stay in Course History'}</span></div><div class="upcoming-lesson-grid">${rest.map(g=>`<article class="upcoming-lesson-card" onclick="window.selectPrepLesson('${esc(g.key)}')"><div class="upcoming-card-head"><div><div class="eyebrow">${sessionLabel(g)}</div><h4>${esc(g.names.join(' + '))}</h4></div><span class="prep-status ${g.status}">${readyLabel(g)}</span></div><div class="topic">${esc(g.title)}</div><p class="outcome">🎯 ${esc(g.tpl.outcome)}</p><div class="readiness-bar"><i style="width:${g.readiness}%"></i></div><div class="upcoming-card-foot"><small>${esc(when(g))}</small><small>${g.deck?'✓ Deck':'○ Deck'} · ${g.plans?.length?'✓ Plan':'○ Plan'}</small></div></article>`).join('')}</div>`;}
+    return `<div class="upcoming-heading"><div><div class="eyebrow">UPCOMING</div><h3>${isZh()?'其他待备课程':'Other upcoming lessons'}</h3></div><span>${isZh()?'历史课程已自动留在「过往课程」':'Completed lessons stay in Course History'}</span></div><div class="upcoming-lesson-grid">${rest.map(g=>`<article class="upcoming-lesson-card" onclick="window.selectPrepLesson('${esc(g.key)}')"><div class="upcoming-card-head"><div><div class="eyebrow">${sessionLabel(g)}</div><h4>${esc(g.names.join(' + '))}</h4></div><span class="prep-status ${g.status}">${readyLabel(g)}</span></div><div class="topic">${esc(g.title)}</div><p class="outcome">🎯 ${esc(g.tpl.outcome)}</p><div class="readiness-bar"><i style="width:${g.readiness}%"></i></div><div class="upcoming-card-foot"><small>${esc(when(g))}</small><small>${g.deck?'✓ Deck':(planMaterials(g).length?'✓ Assets':'○ Assets')} · ${g.plans?.length?'✓ Plan':'○ Plan'}</small></div></article>`).join('')}</div>`;}
 
   function renderPrepDashboard(){
     if(!onPrepPage())return;
