@@ -70,8 +70,14 @@
   }
 
   function groupLessons(){
-    const ext=window.STUDIO_EXT||{};const plans=(ext.lessonPlans||[]).filter(p=>p.status!=='archived'&&p.status!=='completed');
-    const events=(ext.calendarEvents||[]).filter(e=>e.event_type==='lesson'&&new Date(e.start_at)>=new Date(now().getTime()-6*60*60*1000));
+    const ext=window.STUDIO_EXT||{};const current=now();
+    const plans=(ext.lessonPlans||[]).filter(p=>p.status!=='archived'&&p.status!=='completed');
+    const events=(ext.calendarEvents||[]).filter(e=>{
+      if(e.event_type!=='lesson')return false;
+      const end=e.end_at?new Date(e.end_at):null;
+      const start=new Date(e.start_at);
+      return end?end>current:start>=current;
+    });
     const groups=[];const used=new Set();
     for(const e of events){
       const names=studentNamesForEvent(e);if(!names.length)continue;
@@ -83,7 +89,11 @@
       const hasPlan=matched.length>0;const hasAssets=Boolean(deck)||matched.some(p=>Array.isArray(p.materials)&&p.materials.length);const readiness=Math.min(100,(hasPlan?45:0)+(hasAssets?35:0)+20);
       groups.push({key:`event:${e.id}`,names,title,event:e,plans:matched,deck,tpl,readiness,status:hasPlan&&deck?'ready':'partial'});
     }
-    const leftover=plans.filter(p=>!used.has(p.id));
+    const leftover=plans.filter(p=>{
+      if(used.has(p.id))return false;
+      if(!p.scheduled_for)return true;
+      return new Date(p.scheduled_for)>=current;
+    });
     const bySig=new Map();
     leftover.forEach(p=>{
       const s=studentById(p.student_id);if(!s)return;const sig=`${p.title}|${p.scheduled_for||''}`;if(!bySig.has(sig))bySig.set(sig,[]);bySig.get(sig).push({p,s});
