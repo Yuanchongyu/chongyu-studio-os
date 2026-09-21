@@ -2,8 +2,8 @@ import crypto from 'node:crypto';
 
 const PROJECT_URL='https://lclkojyfyqhefwmkmgym.supabase.co';
 const SESSION_COOKIE='studio_session';
-function key(){return process.env.SUPABASE_SECRET_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||'';}
-function headers(){const k=key();const h={apikey:k,'Content-Type':'application/json'};if(k.startsWith('eyJ'))h.Authorization=`Bearer ${k}`;return h;}
+function key(){return String(process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.SUPABASE_SECRET_KEY||'').trim();}
+function headers(){const k=key();if(!k)throw new Error('Supabase server key is not configured for this deployment.');const h={apikey:k,Authorization:`Bearer ${k}`,'Content-Type':'application/json'};return h;}
 function cookies(req){const raw=req.headers.cookie||'';return Object.fromEntries(raw.split(';').map(p=>{const i=p.indexOf('=');return i<0?['','']:[p.slice(0,i).trim(),decodeURIComponent(p.slice(i+1).trim())]}).filter(([k])=>k));}
 function safeEqual(a,b){const aa=Buffer.from(String(a||''));const bb=Buffer.from(String(b||''));return aa.length===bb.length&&crypto.timingSafeEqual(aa,bb);}
 function sig(){const s=process.env.STUDIO_ACCESS_TOKEN||'';return s?crypto.createHmac('sha256',s).update('chongyu-studio-founder-session-v1').digest('hex'):'';}
