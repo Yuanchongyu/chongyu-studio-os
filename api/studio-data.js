@@ -3,14 +3,12 @@ import crypto from 'node:crypto';
 const PROJECT_URL = 'https://lclkojyfyqhefwmkmgym.supabase.co';
 const SESSION_COOKIE = 'studio_session';
 
-function serverKey() {
-  return process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-}
+function serverKey() { return String(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '').trim(); }
 
 function headers(extra = {}) {
   const key = serverKey();
-  const h = { apikey: key, 'Content-Type': 'application/json', ...extra };
-  if (key.startsWith('eyJ')) h.Authorization = `Bearer ${key}`;
+  if (!key) throw new Error('Supabase server key is not configured for this deployment.');
+  const h = { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...extra };
   return h;
 }
 
